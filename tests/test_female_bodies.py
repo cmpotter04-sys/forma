@@ -135,12 +135,11 @@ class TestMeasurementValidator:
 
     def test_validate_strict_mode_female_chest(self):
         """
-        Female M chest achieved ≈ 93.53 cm vs target 92.0 cm → delta ≈ +15.3mm.
-        The tolerance for chest_cm is 15mm, so strict=True must mark it as NOT
-        within_tolerance and set valid=False.
+        Pass a target 25cm off from achieved (e.g. 67.0 vs ~92cm achieved).
+        Delta ~250mm >> 15mm tolerance, so strict=True must mark it out of tolerance.
         """
         profile_path = FEMALE_CONFIGS["M"]["profile"]
-        targets = {"chest_cm": 92.0}
+        targets = {"chest_cm": 67.0}  # deliberately wrong — 25cm off
 
         result = validate_measurements(profile_path, targets, strict=True)
 

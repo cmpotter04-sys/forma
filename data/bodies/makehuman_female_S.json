@@ -14,16 +14,16 @@
   },
   "achieved_measurements": {
     "height_cm": 163.0,
-    "chest_cm": 83.38,
-    "waist_cm": 65.8,
-    "hip_cm": 90.02,
+    "chest_cm": 83.82,
+    "waist_cm": 65.87,
+    "hip_cm": 90.01,
     "shoulder_width_cm": 44.0,
     "inseam_cm": 82.0
   },
   "smplx_betas": null,
-  "max_measurement_error_mm": 6.2,
-  "mesh_path": "data/bodies/makehuman_female_S.ply",
-  "created_at": "2026-04-05T19:00:52.845793+00:00",
+  "max_measurement_error_mm": 1.8,
+  "mesh_path": "/Users/calvinpotter/Desktop/Forma 4.4.26/data/bodies/makehuman_female_S.ply",
+  "created_at": "2026-04-05T19:40:49.919226+00:00",
   "mesh_source": "makehuman_cc0_base_with_xz_scaling",
   "vertex_count": 21833,
   "face_count": 36972
