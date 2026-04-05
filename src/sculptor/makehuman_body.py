@@ -227,8 +227,13 @@ def generate_body(
     height_m = height_cm / 100.0
     targets_map = {"chest": chest_cm, "waist": waist_cm, "hip": hip_cm}
 
-    # 4-5. Iterate: measure → scale → re-measure (up to 8 rounds)
-    for iteration in range(8):
+    # 4-5. Iterate: measure → scale → re-measure (up to 15 rounds)
+    # Adaptive damping: if a region's error oscillates (sign flip), halve
+    # the correction step for that region to prevent overshoot bouncing.
+    prev_errors: dict[str, float] = {}   # region → signed error from last iter
+    step_damp:   dict[str, float] = {r: 1.0 for r in targets_map}
+
+    for iteration in range(15):
         landmarks = []
         for region, target_cm in targets_map.items():
             frac_lo, frac_hi = _BANDS[region]
@@ -236,11 +241,24 @@ def generate_body(
             best_y, current_circ = _scan_for_landmark(
                 vertices, frac_lo * height_m, frac_hi * height_m, maximize=maximize,
             )
-            landmarks.append((best_y, current_circ, target_cm))
 
-        # Check if all within tolerance
-        max_err = max(abs(l[1] - l[2]) for l in landmarks)
-        if max_err <= 2.0:
+            # Adaptive damping: detect oscillation (sign flip vs previous iter)
+            signed_err = current_circ - target_cm
+            if region in prev_errors and prev_errors[region] * signed_err < 0:
+                # Error flipped sign → overshoot; halve the step size
+                step_damp[region] = max(step_damp[region] * 0.5, 0.125)
+            prev_errors[region] = signed_err
+
+            # Build a damped target: move only step_damp fraction toward goal
+            damp = step_damp[region]
+            damped_target = current_circ + damp * (target_cm - current_circ)
+            landmarks.append((best_y, current_circ, damped_target))
+
+        # Check if all regions are within 3 mm of their true (undamped) targets
+        max_true_err = max(
+            abs(prev_errors[r]) for r in targets_map if r in prev_errors
+        )
+        if max_true_err <= 0.3:
             break
 
         _scale_torso_xz(vertices, landmarks)
