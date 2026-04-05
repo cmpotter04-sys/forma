@@ -338,6 +338,62 @@ def test_quick_fit_check_missing_gender_returns_422():
     assert resp.status_code == 422
 
 
+# ---------------------------------------------------------------------------
+# GET /bodies
+# ---------------------------------------------------------------------------
+
+def test_bodies_returns_200():
+    resp = client.get("/bodies")
+    assert resp.status_code == 200
+
+
+def test_bodies_has_count_and_list():
+    resp = client.get("/bodies")
+    data = resp.json()
+    assert "bodies" in data
+    assert "count" in data
+    assert isinstance(data["bodies"], list)
+
+
+def test_bodies_count_matches_list_length():
+    resp = client.get("/bodies")
+    data = resp.json()
+    assert data["count"] == len(data["bodies"])
+
+
+def test_bodies_has_six_mannequins():
+    """Expect S/M/XL for both male and female = 6 profiles."""
+    resp = client.get("/bodies")
+    assert resp.json()["count"] == 6
+
+
+def test_bodies_each_has_required_fields():
+    resp = client.get("/bodies")
+    required = {"body_profile_id", "mesh_path", "achieved_measurements", "vertex_count"}
+    for body in resp.json()["bodies"]:
+        missing = required - set(body.keys())
+        assert not missing, f"Body {body.get('body_profile_id')} missing: {missing}"
+
+
+# ---------------------------------------------------------------------------
+# GET /garments
+# ---------------------------------------------------------------------------
+
+def test_garments_returns_200():
+    resp = client.get("/garments")
+    assert resp.status_code == 200
+
+
+def test_garments_has_tshirt():
+    data = client.get("/garments").json()
+    assert "tshirt" in data["garments"]
+
+
+def test_garments_tshirt_has_five_sizes():
+    data = client.get("/garments").json()
+    assert set(data["garments"]["tshirt"]["sizes"]) == {"XS", "S", "M", "L", "XL"}
+
+
 def test_quick_fit_check_invalid_gender_returns_422():
     payload = {**QUICK_PAYLOAD_MALE, "gender": "nonbinary"}
     resp = client.post("/fit-check/quick", json=payload)

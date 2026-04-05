@@ -28,8 +28,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
 
+import json
+
 from pipeline import run_fit_check
 from sculptor.anny_body import SIZE_PRESETS, SIZE_PRESETS_FEMALE
+
+_ROOT = Path(__file__).parent.parent
 
 # ---------------------------------------------------------------------------
 # App
@@ -154,6 +158,48 @@ def sizes() -> dict:
         "male": SIZE_PRESETS,
         "female": SIZE_PRESETS_FEMALE,
     }
+
+
+@app.get("/bodies", summary="List available body mesh profiles")
+def bodies() -> dict:
+    """
+    Return all synthetic mannequin body profiles from data/bodies/.
+    Each entry includes the body_profile_id, gender, size, and achieved_measurements.
+    """
+    bodies_dir = _ROOT / "data" / "bodies"
+    result = []
+    for json_path in sorted(bodies_dir.glob("makehuman_*.json")):
+        try:
+            with open(json_path) as f:
+                profile = json.load(f)
+            result.append({
+                "body_profile_id": profile.get("body_profile_id"),
+                "mesh_path": profile.get("mesh_path"),
+                "body_source": profile.get("body_source"),
+                "measurements": profile.get("measurements"),
+                "achieved_measurements": profile.get("achieved_measurements"),
+                "max_measurement_error_mm": profile.get("max_measurement_error_mm"),
+                "vertex_count": profile.get("vertex_count"),
+            })
+        except (OSError, KeyError, ValueError):
+            continue
+    return {"bodies": result, "count": len(result)}
+
+
+@app.get("/garments", summary="List available garment patterns")
+def garments() -> dict:
+    """
+    Return all supported garment types and their available sizes.
+    """
+    from pattern_maker.load_patterns import SUPPORTED_GARMENTS
+    result = {}
+    for garment_type, spec in SUPPORTED_GARMENTS.items():
+        result[garment_type] = {
+            "sizes": spec["sizes"],
+            "pattern_prefix": spec["pattern_prefix"],
+            "patterns_dir": spec["patterns_dir"],
+        }
+    return {"garments": result}
 
 
 @app.post("/fit-check", summary="Run a full fit-check")

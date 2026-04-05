@@ -1,0 +1,14 @@
+{
+  "id": "calvinpotter/forma-hood-validation",
+  "title": "Forma HOOD Validation",
+  "code_file": "hood_validation.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
