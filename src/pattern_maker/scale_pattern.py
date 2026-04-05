@@ -48,16 +48,31 @@ def scale_pattern(input_path: str | Path, output_path: str | Path, scale_factor:
     source_scale = source_meta.get("scale_factor", 1.0)
     source_size = source_meta.get("size", "M")
 
-    # Infer new size from output filename
-    stem = output_path.stem  # e.g. "tshirt_size_XS"
+    # Infer new size from output filename (e.g. "tshirt_size_XS" → "XS")
+    stem = output_path.stem
     new_size = stem.split("_")[-1] if "_" in stem else "scaled"
 
+    # Derive garment_id prefix from source metadata or input filename rather
+    # than hardcoding "tshirt_gc_v1".  This lets scale_pattern() work for any
+    # garment type (shirt, trouser, dress, …).
+    source_garment_id = source_meta.get("garment_id", input_path.stem)
+    # Strip any trailing size token from the source garment_id
+    # e.g. "tshirt_gc_v1_size_M" → "tshirt_gc_v1_size"
+    # We want the prefix up to (but not including) the old size value.
+    if source_garment_id.endswith(f"_{source_size}"):
+        garment_id_prefix = source_garment_id[: -len(f"_{source_size}")]
+    else:
+        garment_id_prefix = source_garment_id
+
+    # Similarly, derive the scaled_from filename from the actual input file.
+    scaled_from_filename = input_path.name
+
     scaled["_forma_metadata"] = {
-        "garment_id": f"tshirt_gc_v1_size_{new_size}",
+        "garment_id": f"{garment_id_prefix}_{new_size}",
         "size": new_size,
         "scale_factor": round(source_scale * scale_factor, 6),
         "source": source_meta.get("source", "unknown"),
-        "scaled_from": f"tshirt_size_{source_size}.json",
+        "scaled_from": scaled_from_filename,
         "relative_scale": scale_factor,
         "fabric_id": source_meta.get("fabric_id", "cotton_jersey_default"),
     }

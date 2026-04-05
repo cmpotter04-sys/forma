@@ -58,10 +58,11 @@ def compute_region_clearance(
 
     Returns
     -------
-    delta_mm : float — median signed clearance in millimetres
+    delta_mm : float — median signed clearance in millimetres.
+               Returns 0.0 when either vertex list is empty (no coverage).
     """
     if not garment_vertex_ids or not body_vertex_ids:
-        return 0.0
+        return 0.0  # no coverage in this region — return neutral value
 
     body_region_verts = body_vertices[body_vertex_ids]
     body_region_normals = body_normals[body_vertex_ids]
@@ -100,11 +101,19 @@ def compute_region_clearance(
         # has bend_offset_m=0, so existing results are unchanged.
         circ_delta_m = mean_body_r * (garment_scale - 1.0) + bend_offset_m
 
-        # Use circumference-based value as a floor for the clearance.
-        # KDTree may underestimate tightness when garment is inside the body,
-        # so take the minimum (most negative) of the two per vertex.
-        circ_clearance = np.full(len(gv), circ_delta_m)
-        signed_dists = np.minimum(kdtree_signed, circ_clearance)
+        # Use circumference-based value as a lower bound only when it signals
+        # tightness (circ_delta_m < 0).  When the garment is loose, the KDTree
+        # nearest-neighbor distance is the better estimator and must not be
+        # clamped down by a positive circ value.
+        #
+        # Correct behaviour:
+        #   tight garment (circ < 0): take min so the more-negative value wins
+        #   loose garment (circ ≥ 0): keep kdtree reading unchanged
+        if circ_delta_m < 0.0:
+            circ_clearance = np.full(len(gv), circ_delta_m)
+            signed_dists = np.minimum(kdtree_signed, circ_clearance)
+        else:
+            signed_dists = kdtree_signed
     else:
         signed_dists = kdtree_signed
 

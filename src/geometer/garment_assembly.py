@@ -233,14 +233,27 @@ def place_sleeve_at_armhole(
     arm_dir = arm_direction / (np.linalg.norm(arm_direction) + 1e-10)
     r_arm_m = armhole_radius
 
+    # Build a pair of basis vectors perpendicular to arm_dir for cylinder wrapping.
+    # u_perp: used for sin(angle) component; v_perp: used for cos(angle) component.
+    world_up = np.array([0.0, 1.0, 0.0])
+    if abs(np.dot(arm_dir, world_up)) > 0.9:
+        world_up = np.array([0.0, 0.0, 1.0])
+    u_perp = np.cross(arm_dir, world_up)
+    u_perp /= np.linalg.norm(u_perp) + 1e-10
+    v_perp = np.cross(arm_dir, u_perp)
+    v_perp /= np.linalg.norm(v_perp) + 1e-10
+
     positions = np.empty((len(pts), 3), dtype=float)
     for i in range(len(pts)):
         angle = theta[i] + theta_offset
         along = axial_cm[i] / 100.0  # cm to m
-        # Position = armhole center + along arm + cylinder wrapping in YZ
-        positions[i, 0] = armhole_centroid[0] + along * arm_dir[0]
-        positions[i, 1] = armhole_centroid[1] + r_arm_m * math.sin(angle)
-        positions[i, 2] = armhole_centroid[2] + r_arm_m * math.cos(angle)
+        # Position = armhole center + axial displacement + radial cylinder offset.
+        # All three components of arm_dir contribute to the axial term so that
+        # a non-horizontal arm direction is handled correctly.
+        positions[i] = (armhole_centroid
+                        + along * arm_dir
+                        + r_arm_m * math.sin(angle) * u_perp
+                        + r_arm_m * math.cos(angle) * v_perp)
 
     return positions
 

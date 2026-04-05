@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 _SRC = Path(__file__).parent
@@ -53,20 +54,22 @@ def _load_fabric_params(fabric_id: str, library_path: Path | None = None) -> dic
 
 
 def run_fit_check(
-    body_mesh_path: str,
-    pattern_path: str,
-    seam_manifest_path: str,
+    body_mesh_path: str = None,
+    pattern_path: str = None,
+    seam_manifest_path: str = None,
     fabric_id: str = "cotton_jersey_default",
     fabric_library_path: str | None = None,
     backend: str = "cpu",
     subdivide_target: int = 0,
+    anny_measurements: dict = None,
 ) -> dict:
     """
     Full pipeline: body + pattern + fabric → fit_verdict dict (v1.2 schema).
 
     Parameters
     ----------
-    body_mesh_path      : path to body mesh PLY file
+    body_mesh_path      : path to pre-built body mesh PLY file.
+                          Mutually exclusive with anny_measurements.
     pattern_path        : path to GarmentCode JSON pattern
     seam_manifest_path  : path to seam_manifest.json
     fabric_id           : key into fabric_library.json (default: cotton_jersey_default)
@@ -75,6 +78,10 @@ def run_fit_check(
                           or "hood" (ContourCraft/HOOD GPU — requires CUDA + pretrained weights)
     subdivide_target    : if > 0, subdivide garment mesh to this vertex count
                           after assembly (default: 0 = no subdivision)
+    anny_measurements   : if given, generate body on the fly via generate_anny_body().
+                          Mutually exclusive with body_mesh_path. Expected keys:
+                            height_cm, chest_cm, waist_cm, hips_cm,
+                            inseam_cm, shoulder_width_cm  (all float, in cm)
 
     Returns
     -------
@@ -82,8 +89,9 @@ def run_fit_check(
 
     Raises
     ------
+    ValueError              — if both or neither of body_mesh_path / anny_measurements are given,
+                              if fabric_id not found in fabric library, or invalid backend
     FileNotFoundError       — if body_mesh_path, pattern_path, or seam_manifest_path don't exist
-    ValueError              — if fabric_id not found in fabric library or invalid backend
     SeamValidationError     — if seam manifest fails validation
     SimulationExplosionError — if solver diverges
     RuntimeError            — if tunnel-through exceeds limit or other simulation failure
@@ -92,6 +100,27 @@ def run_fit_check(
     """
     if backend not in ("cpu", "warp", "hood"):
         raise ValueError(f"Unknown backend: {backend!r}. Must be 'cpu', 'warp', or 'hood'.")
+
+    # 0. Resolve body source — exactly one of body_mesh_path / anny_measurements required
+    if anny_measurements is not None and body_mesh_path is not None:
+        raise ValueError(
+            "Provide either body_mesh_path or anny_measurements, not both."
+        )
+    if anny_measurements is None and body_mesh_path is None:
+        raise ValueError(
+            "One of body_mesh_path or anny_measurements must be provided."
+        )
+
+    _tmp_file = None  # holds the NamedTemporaryFile so it stays alive during simulation
+    body_source_override = None
+
+    if anny_measurements is not None:
+        from sculptor.anny_body import generate_anny_body
+        _tmp_file = tempfile.NamedTemporaryFile(suffix=".ply", delete=False)
+        _tmp_file.close()  # close so generate_anny_body can write to it on all platforms
+        generate_anny_body(**anny_measurements, output_path=_tmp_file.name)
+        body_mesh_path = _tmp_file.name
+        body_source_override = "anny_parametric"
 
     # 1. Validate inputs exist
     body_path = _validate_path(body_mesh_path, "Body mesh")
@@ -136,6 +165,10 @@ def run_fit_check(
 
     # 5. Generate verdict
     verdict = generate_verdict(sim_result, garment_id, body_profile_id, fabric_id)
+
+    # 6. Override body_source when body was generated from Anny measurements
+    if body_source_override is not None:
+        verdict["body_source"] = body_source_override
 
     return verdict
 
