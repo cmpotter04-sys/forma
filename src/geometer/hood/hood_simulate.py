@@ -385,17 +385,25 @@ def run_simulation_hood(
     import os
 
     # Resolve ContourCraft root
+    # Kaggle: set CONTOURCRAFT_ROOT=/kaggle/working/ContourCraft (cloned in notebook Step 1)
+    # Local:  set CONTOURCRAFT_ROOT=/path/to/ContourCraft or pass explicitly
     if contourcraft_root is None:
-        contourcraft_root = os.environ.get("CONTOURCRAFT_ROOT", "/tmp/ContourCraft")
+        contourcraft_root = os.environ.get(
+            "CONTOURCRAFT_ROOT",
+            "/kaggle/working/ContourCraft",  # default matches hood_validation.ipynb
+        )
     contourcraft_root = Path(contourcraft_root)
 
     if not contourcraft_root.exists():
         raise ImportError(
-            f"ContourCraft root not found: {contourcraft_root}. "
-            "Clone it with: git clone https://github.com/Dolorousrtur/ContourCraft.git /tmp/ContourCraft"
+            f"ContourCraft root not found: {contourcraft_root}.\n"
+            "On Kaggle: the notebook clones it to /kaggle/working/ContourCraft automatically.\n"
+            "Locally: git clone https://github.com/Dolorousrtur/ContourCraft.git <path> "
+            "then set CONTOURCRAFT_ROOT=<path>"
         )
 
     # Resolve checkpoint path
+    # Kaggle: set CONTOURCRAFT_CHECKPOINT=/kaggle/working/ContourCraft/trained_models/contourcraft.pth
     if checkpoint_path is None:
         env_ckpt = os.environ.get("CONTOURCRAFT_CHECKPOINT")
         if env_ckpt:
@@ -406,9 +414,9 @@ def run_simulation_hood(
     checkpoint_path = Path(checkpoint_path)
     if not checkpoint_path.exists():
         raise RuntimeError(
-            f"ContourCraft checkpoint not found: {checkpoint_path}. "
-            "Download contourcraft.pth from: "
-            "https://drive.google.com/file/d/1NfxAeaC2va8TWMjiO_gbAcVPnZ8BYFPD/view"
+            f"ContourCraft checkpoint not found: {checkpoint_path}.\n"
+            "Download contourcraft.pth (gdown 1NfxAeaC2va8TWMjiO_gbAcVPnZ8BYFPD) "
+            "and place it at the path above, or set CONTOURCRAFT_CHECKPOINT=<path>."
         )
 
     # Ensure ContourCraft can be imported (checks CUDA)
