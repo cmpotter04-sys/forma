@@ -74,7 +74,9 @@ def _ensure_warp():
         except ImportError:
             raise ImportError(
                 "warp-lang is required for the Warp backend. "
-                "Install it with: pip install warp-lang"
+                "Install it with: pip install warp-lang\n"
+                "NOTE: warp.sim requires a GPU runtime (e.g. Google Colab with GPU). "
+                "The CPU-only warp-lang PyPI build does not include warp.sim."
             )
     return _wp, _wp_sim
 
@@ -96,8 +98,11 @@ def _build_warp_model(
       - Collar pinning → kinematic particles (mass=0)
       - Body mesh → collision shape
 
-    Returns (model, garment_particle_offset) where garment_particle_offset
-    is the index offset for garment particles in the model.
+    All configuration that Warp reads at finalize-time (gravity, ground,
+    particle radius, contact margins) is set on the builder BEFORE finalize().
+    Post-finalize attributes on the model are read-only in Warp 1.x.
+
+    Returns the finalized wp.sim.Model.
     """
     wp, sim = _ensure_warp()
     from geometer.warp.mesh_bridge import compute_particle_masses, build_warp_mesh
@@ -121,6 +126,25 @@ def _build_warp_model(
     mass_floor = max(avg_mass * 0.1, 1e-5)
     masses = np.maximum(masses, mass_floor)
 
+    # ---- Gravity: 1/20th physical (quasi-static settling, matches CPU path) ----
+    # Full 9.81 m/s² causes shoulder vertices to drift below region thresholds
+    # over 200 steps. Reduced gravity limits total drop to ~1cm. Density-scaled
+    # so heavier fabrics drape more (cotton reference density = 0.18 kg/m²).
+    # builder.gravity and builder.ground must be set BEFORE finalize().
+    ref_density = 0.18
+    density_ratio = density / ref_density
+    gravity_y = -9.81 * 0.05 * density_ratio  # ~-0.49 m/s² for cotton
+    builder.gravity = wp.vec3(0.0, float(gravity_y), 0.0)
+
+    # ---- No ground plane — garment is on a body, not falling to floor ----
+    # builder.ground is a ModelBuilder attribute that must be set pre-finalize.
+    builder.ground = False
+
+    # ---- Particle radius: 1mm standoff (Warp default 0.1m = 100mm is too large) ----
+    # default_particle_radius sets the radius for all subsequently added particles.
+    # Must be set before add_particle() calls.
+    builder.default_particle_radius = 0.001  # 1mm
+
     # ---- Pin collar (top 8% by Y) — set mass=0 for kinematic ----
     y_coords = positions[:, 1]
     y_threshold = float(np.percentile(y_coords, 92))
@@ -135,16 +159,24 @@ def _build_warp_model(
             mass=m,
         )
 
+    # ---- Spring stiffness mapping ----
+    # Warp XPBD spring stiffness is force-based (N/m). Scale proportional to
+    # avg particle mass for numerical stability. The ratio ke/m must stay < ~1e4
+    # to avoid stiff integrator instability at dt=0.001s.
+    #   warp_stretch_ke = avg_mass × 10000  → ratio = 1e4 (borderline stable)
+    #   warp_stretch_kd = avg_mass × 10     → ratio = 10  (well-damped)
+    # Seam constraints are 2× stiffer to pull panels together tightly.
+    warp_stretch_ke = avg_mass * 10000.0
+    warp_stretch_kd = avg_mass * 10.0
+    seam_ke = warp_stretch_ke * 2.0
+    seam_kd = warp_stretch_kd
+
     # ---- Add stretch constraints as springs ----
+    # control=0.0 means "use natural rest length computed from initial positions"
+    # (the distance between vertex i and vertex j at t=0). This matches
+    # the Phase 1 CPU solver which stores stretch_rest as initial edge lengths.
     stretch_i = garment["stretch_i"]
     stretch_j = garment["stretch_j"]
-    stretch_rest = garment["stretch_rest"]
-
-    stretch_stiffness = fabric_params["stretch_stiffness"]
-    # Warp XPBD spring stiffness is force-based (N/m). Scale proportional
-    # to mass for stability. Higher ratio = stiffer fabric response.
-    warp_stretch_ke = avg_mass * 10000.0  # force-based spring stiffness scaled to particle mass
-    warp_stretch_kd = avg_mass * 10.0  # damping must be mass-proportional to avoid explosion
 
     for k in range(len(stretch_i)):
         builder.add_spring(
@@ -155,10 +187,11 @@ def _build_warp_model(
             control=0.0,
         )
 
-    # ---- Add seam constraints (slightly stiffer than stretch) ----
-    seam_ke = warp_stretch_ke * 2.0
-    seam_kd = warp_stretch_kd  # same damping for seams
-
+    # ---- Add seam constraints (target rest_length = 0, so panels pull together) ----
+    # Seam pairs are matched vertices from adjacent panels that should coincide.
+    # We model them as springs with control=0.0 (use initial separation as rest).
+    # The initial separation is ~0 because project_garment_onto_body already
+    # places seam vertices at the same body-surface location.
     seam_i = garment["seam_i"]
     seam_j = garment["seam_j"]
     for k in range(len(seam_i)):
@@ -182,30 +215,27 @@ def _build_warp_model(
             control=0.0,
         )
 
-    # ---- Add body as collision shape ----
+    # ---- Add body as kinematic collision shape ----
+    # add_body returns the body index (0 for the first body).
+    # add_shape_mesh attaches the collision geometry to that body.
+    # density=0.0 makes the body kinematic (infinite effective mass — it doesn't move).
     body_mesh = build_warp_mesh(body_verts_np, body_faces_np)
-    builder.add_body(origin=wp.transform_identity())
+    body_idx = builder.add_body(origin=wp.transform_identity())
     builder.add_shape_mesh(
-        body=0,
+        body=body_idx,
         mesh=body_mesh,
-        density=0.0,  # kinematic (infinite mass)
+        density=0.0,
     )
 
-    # ---- Finalize ----
+    # ---- Finalize model ----
     model = builder.finalize()
 
-    # Collision standoff: Warp defaults particle_radius to 0.1m (100mm) which
-    # pushes the garment far from the body. Set to 1mm to match physical standoff.
-    model.particle_radius = wp.array(
-        np.full(N, 0.001, dtype=np.float32),
-        device=model.particle_radius.device,
-    )
-    model.soft_contact_margin = 0.002  # 2mm collision detection margin
-
-    # Set gravity AFTER finalize: 1/20th physical (quasi-static settling)
-    # 9.81 / 20 = 0.4905 m/s²
-    model.gravity = np.array([0.0, -0.49, 0.0])
-    model.ground = False  # no ground plane — garment is on a body
+    # ---- Post-finalize: soft contact parameters ----
+    # model.soft_contact_margin: distance (m) within which soft contact forces activate.
+    # model.soft_contact_ke: contact spring stiffness (N/m).
+    # These are model-level float attributes readable/writable after finalize in Warp 1.x.
+    model.soft_contact_margin = 0.002   # 2mm activation distance
+    model.soft_contact_ke = 1e4         # contact spring stiffness
 
     return model
 
@@ -221,66 +251,101 @@ def _run_warp_simulation(
     """
     Run the Warp XPBD simulation loop.
 
-    Returns dict with final positions, convergence step, and kinetic energy.
+    Simulation strategy mirrors the CPU quasi-static draping solver:
+      1. XPBDIntegrator applies gravity + solves springs (n_constraint_iters per step)
+      2. wp.sim.collide() resolves soft body-collision contacts
+      3. Convergence detected when max vertex movement < 0.05mm between steps
+      4. Velocity damping applied each step via the fabric damping coefficient
+
+    The XPBDIntegrator.simulate() call advances state_0 → state_1 in one step.
+    States are then swapped so state_0 always holds the "current" positions.
+
+    Returns dict with final positions (N, 3), convergence step, and kinetic energy.
     """
     wp, sim = _ensure_warp()
 
     N = len(garment["vertices"])
 
+    # XPBDIntegrator: iterations = constraint solver passes per timestep.
+    # Matches n_constraint_iters = 15 from the CPU solver.
     integrator = sim.XPBDIntegrator(iterations=n_constraint_iters)
 
     state_0 = model.state()
     state_1 = model.state()
 
-    # Sleeve warm-up parameters (match CPU backend)
-    SLEEVE_WARMUP_STEPS = 20
+    # Fabric damping coefficient (0.995 for cotton = 0.5% velocity loss per step).
+    # Applied by scaling particle velocities after each simulate() call.
+    fabric_damping = float(fabric_params.get("damping", 0.995))
+
+    # Pre-compute uniform mass estimate for kinetic energy (used in convergence check).
+    # Per-vertex masses from model aren't easily recovered post-finalize;
+    # this approximation is only used for the KE metric (not for physics).
+    area = max(garment["total_area_m2"], 1e-4)
+    per_vertex_mass = fabric_params["density_kg_m2"] * area / N
 
     convergence_step = max_steps
     final_ke = 0.0
-
     prev_positions = None
 
     for step in range(max_steps):
-        # Extract current positions for convergence check
+        # ---- Extract current particle positions for convergence check ----
+        # state_0.particle_q is a wp.array of vec3 containing all particles.
+        # The first N entries are garment particles; any remaining entries are
+        # body/rigid-body DOFs which we ignore.
         curr_pos = state_0.particle_q.numpy()[:N].copy()
 
         if prev_positions is not None:
-            # Convergence: max vertex movement < 0.05mm
             delta = curr_pos - prev_positions
             max_move = float(np.max(np.linalg.norm(delta, axis=1)))
 
-            # Estimate kinetic energy
-            velocities = delta / dt
-            # Use uniform mass estimate for KE (exact masses aren't easily
-            # accessible from the model after finalize)
-            density = fabric_params["density_kg_m2"]
-            area = max(garment["total_area_m2"], 1e-4)
-            per_vertex_mass = density * area / N
-            ke = float(0.5 * per_vertex_mass * np.sum(velocities ** 2))
+            # Estimate kinetic energy from positional change ≈ velocity = Δx/dt.
+            # Uses uniform mass approximation (sufficient for convergence metric).
+            approx_velocities = delta / dt
+            ke = float(0.5 * per_vertex_mass * np.sum(approx_velocities ** 2))
             final_ke = ke
 
-            # Check for explosion
+            # Explosion guard: NaN or extreme positions (> 10m from origin)
             if np.any(np.isnan(curr_pos)) or np.any(np.abs(curr_pos) > 10.0):
                 raise SimulationExplosionError(
                     f"Warp solver exploded at step {step}: "
                     f"NaN or extreme positions detected."
                 )
 
-            if max_move < 5e-5:  # 0.05mm threshold
+            # Convergence: max vertex movement < 0.05mm between steps.
+            # Matches Phase 1 CPU solver threshold (5e-5 metres = 0.05mm).
+            if max_move < 5e-5:
                 convergence_step = step
                 break
 
         prev_positions = curr_pos.copy()
 
-        # Simulate one step
+        # ---- Simulate one step ----
+        # 1. Clear external forces accumulated from previous step
         state_0.clear_forces()
+
+        # 2. Resolve soft contacts (garment particles vs body collision shape).
+        #    wp.sim.collide() populates soft contact impulses in state_0
+        #    which XPBDIntegrator applies during simulate().
         sim.collide(model, state_0)
+
+        # 3. Advance physics: gravity + spring constraints + contact response.
+        #    XPBDIntegrator runs `iterations` passes of constraint projection.
         integrator.simulate(model, state_0, state_1, dt=dt)
 
-        # Swap states
+        # 4. Apply velocity damping: multiply particle velocities by fabric_damping.
+        #    In Warp 1.x, state.particle_qd is a wp.array of vec3 holding
+        #    garment particle velocities only (rigid body DOFs are in body_qd).
+        #    We apply damping in numpy and write back via assign() to avoid
+        #    requiring a custom GPU kernel for this scalar multiply.
+        if fabric_damping < 1.0:
+            vels = state_1.particle_qd.numpy()      # (N, 3) float32
+            vels_damped = (vels * fabric_damping).astype(np.float32)
+            state_1.particle_qd.assign(vels_damped)
+
+        # 5. Swap states: state_1 becomes the new current state
         state_0, state_1 = state_1, state_0
 
-    # Extract final positions
+    # Extract final particle positions as float64 numpy array
     final_pos = state_0.particle_q.numpy()[:N].astype(np.float64)
 
     return {
@@ -312,6 +377,7 @@ def run_simulation_warp(
     fabric_params       : dict from fabric_library.json["fabrics"][fabric_id]
     dt                  : simulation timestep (seconds)
     max_steps           : maximum simulation steps
+    subdivide_target    : if > 0, subdivide garment mesh to this vertex count
 
     Returns
     -------
@@ -371,7 +437,14 @@ def run_simulation_warp(
     simulation_ms = int((time.perf_counter() - t_start) * 1000)
     draped_positions = warp_result["positions"]   # (N, 3) in metres
 
-    # ---- 5b. Bending resistance offset (same as CPU backend) ----------------
+    # ---- 5b. Bending resistance offset (matches CPU backend) ----------------
+    # The Warp solver uses spring constraints only — no explicit bend constraints.
+    # Stiffer fabrics bridge body concavities rather than conforming; softer
+    # fabrics drape into every contour. This post-solver step pushes each
+    # garment vertex along the body-surface outward normal by an amount that
+    # depends on the fabric's bend_stiffness relative to the cotton reference.
+    # Cotton (ref_bend = 0.005) gets zero offset, preserving existing results.
+    # Collision is re-applied afterward to prevent tunnel-through.
     bend_stiffness = fabric_params.get("bend_stiffness", 0.005)
     ref_bend = 0.005  # cotton_jersey_default reference
     bend_log_ratio = math.log(max(bend_stiffness, 1e-8) / ref_bend)
@@ -381,7 +454,7 @@ def run_simulation_warp(
         _, nearest_body_idx = body_tree.query(draped_positions)
         normals_at_nearest = body_normals[nearest_body_idx]
         draped_positions = draped_positions + normals_at_nearest * bend_offset_m
-        # Re-apply collision via KDTree (same as CPU path)
+        # Re-apply collision via KDTree — mirror of CPU path
         nearest_pts = body_vertices[nearest_body_idx]
         nearest_nrm = body_normals[nearest_body_idx]
         displacements = draped_positions - nearest_pts

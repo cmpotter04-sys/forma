@@ -1,0 +1,38 @@
+name: Test Suite
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install trimesh scipy numpy pytest ezdxf shapely
+
+      - name: Run tests
+        run: pytest tests/ --tb=short -q --ignore=tests/test_warp_parity.py --ignore=tests/test_warp_smoke_100k.py
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest-results
+          path: |
+            .pytest_cache/
+            tests/
+          retention-days: 7

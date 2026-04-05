@@ -199,6 +199,7 @@ def generate_anny_body(
     inseam_cm: float,
     shoulder_width_cm: float,
     output_path: str | None = None,
+    gender: str = "custom",
 ) -> trimesh.Trimesh:
     """
     Return a watertight body mesh scaled to the given measurements.
@@ -213,6 +214,8 @@ def generate_anny_body(
     shoulder_width_cm  : biacromial shoulder width in cm     (e.g. 38.0)
     output_path        : if given, save PLY to this path and write a
                          companion body_profile.json
+    gender             : "male", "female", or "custom" — recorded in
+                         body_profile.json; does not affect geometry
 
     Returns
     -------
@@ -431,6 +434,7 @@ def generate_anny_body(
             hips_cm=hips_cm,
             inseam_cm=inseam_cm,
             shoulder_width_cm=shoulder_width_cm,
+            gender=gender,
         )
         profile_path = out.with_suffix(".json")
         with open(profile_path, "w") as fh:
@@ -452,11 +456,13 @@ def _build_profile(
     hips_cm: float,
     inseam_cm: float,
     shoulder_width_cm: float,
+    gender: str = "custom",
 ) -> dict:
     """Build a v1.2-schema body_profile dict for the Anny mesh."""
     return {
         "body_profile_id": output_path.stem,
         "body_source": "anny_parametric",
+        "gender": gender,
         "scan_method": "anny_parametric",
         # Anny is a synthetic parametric model; measurements are exact by
         # construction (all clearance error comes from geometry sampling, not
@@ -499,50 +505,82 @@ def _build_profile(
 # Convenience wrapper — size-named presets
 # ---------------------------------------------------------------------------
 
-# Standard female size presets (EU sizing, cm)
-ANNY_SIZES: dict[str, dict] = {
-    "XS": {
-        "height_cm": 164, "chest_cm": 82, "waist_cm": 63,
-        "hips_cm": 88, "inseam_cm": 73, "shoulder_width_cm": 36,
-    },
+# Standard male size presets (ISO 8559 / EU sizing, cm)
+SIZE_PRESETS: dict[str, dict] = {
     "S": {
-        "height_cm": 166, "chest_cm": 86, "waist_cm": 67,
-        "hips_cm": 92, "inseam_cm": 74, "shoulder_width_cm": 37,
+        "height_cm": 168, "chest_cm": 88, "waist_cm": 73,
+        "hips_cm": 90, "inseam_cm": 77, "shoulder_width_cm": 42,
     },
     "M": {
-        "height_cm": 168, "chest_cm": 90, "waist_cm": 72,
-        "hips_cm": 96, "inseam_cm": 76, "shoulder_width_cm": 38,
+        "height_cm": 176, "chest_cm": 96, "waist_cm": 81,
+        "hips_cm": 98, "inseam_cm": 81, "shoulder_width_cm": 45,
+    },
+    "XL": {
+        "height_cm": 180, "chest_cm": 112, "waist_cm": 97,
+        "hips_cm": 112, "inseam_cm": 83, "shoulder_width_cm": 49,
+    },
+}
+
+# Standard female size presets (ISO 8559, cm)
+SIZE_PRESETS_FEMALE: dict[str, dict] = {
+    "XS": {
+        "height_cm": 158, "chest_cm": 80, "waist_cm": 62,
+        "hips_cm": 87, "inseam_cm": 72, "shoulder_width_cm": 35,
+    },
+    "S": {
+        "height_cm": 163, "chest_cm": 84, "waist_cm": 66,
+        "hips_cm": 91, "inseam_cm": 74, "shoulder_width_cm": 36,
+    },
+    "M": {
+        "height_cm": 168, "chest_cm": 88, "waist_cm": 70,
+        "hips_cm": 95, "inseam_cm": 76, "shoulder_width_cm": 37,
     },
     "L": {
         "height_cm": 170, "chest_cm": 96, "waist_cm": 78,
-        "hips_cm": 102, "inseam_cm": 77, "shoulder_width_cm": 39,
+        "hips_cm": 103, "inseam_cm": 77, "shoulder_width_cm": 39,
     },
     "XL": {
-        "height_cm": 172, "chest_cm": 104, "waist_cm": 87,
-        "hips_cm": 110, "inseam_cm": 78, "shoulder_width_cm": 41,
+        "height_cm": 172, "chest_cm": 104, "waist_cm": 86,
+        "hips_cm": 111, "inseam_cm": 78, "shoulder_width_cm": 41,
     },
 }
+
+# Legacy alias kept for backwards compatibility
+ANNY_SIZES = SIZE_PRESETS_FEMALE
 
 
 def generate_anny_size(
     size: str,
     output_path: str | None = None,
+    gender: str = "male",
 ) -> trimesh.Trimesh:
     """
-    Generate Anny body for a named size (XS / S / M / L / XL).
+    Generate Anny body for a named size.
 
     Parameters
     ----------
-    size        : one of "XS", "S", "M", "L", "XL"
+    size        : size key. Male: "S", "M", "XL".
+                  Female: "XS", "S", "M", "L", "XL".
     output_path : if given, save PLY and body_profile.json here
+    gender      : "male" or "female" — selects the appropriate preset dict
 
     Returns
     -------
     trimesh.Trimesh
     """
-    if size not in ANNY_SIZES:
-        raise ValueError(f"Unknown size '{size}'. Valid: {list(ANNY_SIZES)}")
-    return generate_anny_body(**ANNY_SIZES[size], output_path=output_path)
+    if gender == "female":
+        presets = SIZE_PRESETS_FEMALE
+    elif gender == "male":
+        presets = SIZE_PRESETS
+    else:
+        raise ValueError(f"Unknown gender '{gender}'. Valid: 'male', 'female'")
+
+    if size not in presets:
+        raise ValueError(
+            f"Unknown size '{size}' for gender '{gender}'. "
+            f"Valid: {list(presets)}"
+        )
+    return generate_anny_body(**presets[size], output_path=output_path, gender=gender)
 
 
 # ---------------------------------------------------------------------------

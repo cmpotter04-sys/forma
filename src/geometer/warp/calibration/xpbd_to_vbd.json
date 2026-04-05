@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "description": "XPBD to Warp XPBD compliance mapping for Forma fabric library",
+  "notes": "Compliance = 1 / stiffness. Warp XPBDIntegrator uses compliance in m²/N. Values derived from fabric_library.json XPBD parameters.",
+  "mappings": {
+    "cotton_jersey_default": {
+      "xpbd_stretch_stiffness": 40.0,
+      "xpbd_bend_stiffness": 0.005,
+      "warp_stretch_compliance": 0.025,
+      "warp_bend_compliance": 200.0,
+      "warp_damping": 0.01,
+      "notes": "Standard weight cotton jersey knit. Stretch compliance = 1/40, bend compliance = 1/0.005"
+    },
+    "cotton_jersey_heavy": {
+      "xpbd_stretch_stiffness": 55.0,
+      "xpbd_bend_stiffness": 0.015,
+      "warp_stretch_compliance": 0.01818,
+      "warp_bend_compliance": 66.667,
+      "warp_damping": 0.01,
+      "notes": "Heavy cotton jersey for sweatshirts. Increased stiffness vs. default. Stretch compliance = 1/55, bend compliance = 1/0.015"
+    },
+    "polyester_woven": {
+      "xpbd_stretch_stiffness": 80.0,
+      "xpbd_bend_stiffness": 0.008,
+      "warp_stretch_compliance": 0.0125,
+      "warp_bend_compliance": 125.0,
+      "warp_damping": 0.01,
+      "notes": "Lightweight polyester plain weave for dress shirts. Higher stiffness than jersey. Stretch compliance = 1/80, bend compliance = 1/0.008"
+    },
+    "denim_12oz": {
+      "xpbd_stretch_stiffness": 120.0,
+      "xpbd_bend_stiffness": 0.08,
+      "warp_stretch_compliance": 0.00833,
+      "warp_bend_compliance": 12.5,
+      "warp_damping": 0.01,
+      "notes": "Medium weight denim for jeans. Highest stiffness due to dense weave. Stretch compliance = 1/120, bend compliance = 1/0.08"
+    },
+    "silk_charmeuse": {
+      "xpbd_stretch_stiffness": 25.0,
+      "xpbd_bend_stiffness": 0.001,
+      "warp_stretch_compliance": 0.04,
+      "warp_bend_compliance": 1000.0,
+      "warp_damping": 0.01,
+      "notes": "Lightweight silk charmeuse with minimal bending resistance. Lowest stretch stiffness and extremely low bend stiffness. Stretch compliance = 1/25, bend compliance = 1/0.001"
+    }
+  }
+}

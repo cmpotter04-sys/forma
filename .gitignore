@@ -40,6 +40,7 @@ coverage.xml
 
 # Data / large files
 *.ply
+!data/bodies/*.ply
 *.obj
 *.stl
 data/cache/
