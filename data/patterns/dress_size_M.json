@@ -1,0 +1,407 @@
+{
+  "pattern": {
+    "panels": {
+      "front_torso": {
+        "translation": [
+          0.0,
+          100.0,
+          22.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "vertices": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            28.0,
+            0.0
+          ],
+          [
+            28.0,
+            28.0
+          ],
+          [
+            22.0,
+            30.0
+          ],
+          [
+            6.0,
+            30.0
+          ],
+          [
+            0.0,
+            28.0
+          ]
+        ],
+        "edges": [
+          {
+            "endpoints": [
+              0,
+              1
+            ]
+          },
+          {
+            "endpoints": [
+              1,
+              2
+            ]
+          },
+          {
+            "endpoints": [
+              2,
+              3
+            ],
+            "curvature": {
+              "type": "quadratic",
+              "params": [
+                [
+                  0.5,
+                  -0.15
+                ]
+              ]
+            }
+          },
+          {
+            "endpoints": [
+              3,
+              4
+            ],
+            "curvature": {
+              "type": "quadratic",
+              "params": [
+                [
+                  0.5,
+                  -0.25
+                ]
+              ]
+            }
+          },
+          {
+            "endpoints": [
+              4,
+              5
+            ],
+            "curvature": {
+              "type": "quadratic",
+              "params": [
+                [
+                  0.5,
+                  -0.15
+                ]
+              ]
+            }
+          },
+          {
+            "endpoints": [
+              5,
+              0
+            ]
+          }
+        ]
+      },
+      "back_torso": {
+        "translation": [
+          0.0,
+          100.0,
+          -16.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "vertices": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            28.0,
+            0.0
+          ],
+          [
+            28.0,
+            28.0
+          ],
+          [
+            22.0,
+            30.0
+          ],
+          [
+            6.0,
+            30.0
+          ],
+          [
+            0.0,
+            28.0
+          ]
+        ],
+        "edges": [
+          {
+            "endpoints": [
+              0,
+              1
+            ]
+          },
+          {
+            "endpoints": [
+              1,
+              2
+            ]
+          },
+          {
+            "endpoints": [
+              2,
+              3
+            ],
+            "curvature": {
+              "type": "quadratic",
+              "params": [
+                [
+                  0.5,
+                  -0.12
+                ]
+              ]
+            }
+          },
+          {
+            "endpoints": [
+              3,
+              4
+            ],
+            "curvature": {
+              "type": "quadratic",
+              "params": [
+                [
+                  0.5,
+                  -0.1
+                ]
+              ]
+            }
+          },
+          {
+            "endpoints": [
+              4,
+              5
+            ],
+            "curvature": {
+              "type": "quadratic",
+              "params": [
+                [
+                  0.5,
+                  -0.12
+                ]
+              ]
+            }
+          },
+          {
+            "endpoints": [
+              5,
+              0
+            ]
+          }
+        ]
+      },
+      "front_skirt": {
+        "translation": [
+          0.0,
+          60.0,
+          22.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "vertices": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            28.0,
+            0.0
+          ],
+          [
+            31.5,
+            40.0
+          ],
+          [
+            -3.5,
+            40.0
+          ]
+        ],
+        "edges": [
+          {
+            "endpoints": [
+              0,
+              1
+            ]
+          },
+          {
+            "endpoints": [
+              1,
+              2
+            ]
+          },
+          {
+            "endpoints": [
+              2,
+              3
+            ]
+          },
+          {
+            "endpoints": [
+              3,
+              0
+            ]
+          }
+        ]
+      },
+      "back_skirt": {
+        "translation": [
+          0.0,
+          60.0,
+          -16.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "vertices": [
+          [
+            0.0,
+            0.0
+          ],
+          [
+            28.0,
+            0.0
+          ],
+          [
+            31.5,
+            40.0
+          ],
+          [
+            -3.5,
+            40.0
+          ]
+        ],
+        "edges": [
+          {
+            "endpoints": [
+              0,
+              1
+            ]
+          },
+          {
+            "endpoints": [
+              1,
+              2
+            ]
+          },
+          {
+            "endpoints": [
+              2,
+              3
+            ]
+          },
+          {
+            "endpoints": [
+              3,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    "stitches": [
+      [
+        {
+          "panel": "front_torso",
+          "edge": 1
+        },
+        {
+          "panel": "back_torso",
+          "edge": 1
+        }
+      ],
+      [
+        {
+          "panel": "front_torso",
+          "edge": 5
+        },
+        {
+          "panel": "back_torso",
+          "edge": 5
+        }
+      ],
+      [
+        {
+          "panel": "front_torso",
+          "edge": 0
+        },
+        {
+          "panel": "front_skirt",
+          "edge": 0
+        }
+      ],
+      [
+        {
+          "panel": "back_torso",
+          "edge": 0
+        },
+        {
+          "panel": "back_skirt",
+          "edge": 0
+        }
+      ],
+      [
+        {
+          "panel": "front_skirt",
+          "edge": 1
+        },
+        {
+          "panel": "back_skirt",
+          "edge": 1
+        }
+      ],
+      [
+        {
+          "panel": "front_skirt",
+          "edge": 3
+        },
+        {
+          "panel": "back_skirt",
+          "edge": 3
+        }
+      ]
+    ],
+    "panel_order": [
+      "front_torso",
+      "back_torso",
+      "front_skirt",
+      "back_skirt"
+    ]
+  },
+  "parameters": {},
+  "parameter_order": [],
+  "properties": {
+    "curvature_coords": "relative",
+    "normalize_panel_translation": false,
+    "normalized_edge_loops": true,
+    "units_in_meter": 100
+  },
+  "_forma_metadata": {
+    "garment_id": "dress_gc_v1_size_M",
+    "size": "M",
+    "scale_factor": 1.0,
+    "source": "dress_specification.json",
+    "fabric_id": "cotton_jersey_default"
+  }
+}
