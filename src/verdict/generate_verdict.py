@@ -23,8 +23,9 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from geometer.clearance import classify_ease
 
-OUTPUT_DIR = Path("output/verdicts")
-FABRIC_LIBRARY_PATH = Path("data/fabrics/fabric_library.json")
+_REPO_ROOT = Path(__file__).parent.parent.parent
+OUTPUT_DIR = _REPO_ROOT / "output" / "verdicts"
+FABRIC_LIBRARY_PATH = _REPO_ROOT / "data" / "fabrics" / "fabric_library.json"
 
 # Severity thresholds (from FORMA_WEEK1_SPEC.md)
 # delta_mm > -10  → green
