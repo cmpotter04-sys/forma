@@ -318,3 +318,71 @@ class TestOnDiskRoundTrip:
         path = SEAM_DIR / f"tshirt_size_{size}_manifest.json"
         reloaded = load_and_validate_manifest(path)
         assert reloaded["validation"]["all_seams_valid"]
+
+
+# ---------------------------------------------------------------------------
+# Tank Top (size M) fixture tests
+# ---------------------------------------------------------------------------
+
+TANK_TOP_PATTERN = Path("data/patterns/tank_top_size_M.json")
+TANK_TOP_MANIFEST = Path("data/seam_manifests/tank_top_size_M_seam_manifest.json")
+
+
+class TestTankTopPattern:
+
+    def test_tank_top_loads_without_error(self):
+        pattern = load_pattern(TANK_TOP_PATTERN)
+        assert pattern is not None
+
+    def test_tank_top_has_two_panels(self):
+        pattern = load_pattern(TANK_TOP_PATTERN)
+        assert len(pattern["panels"]) == 2
+
+    def test_tank_top_garment_id(self):
+        pattern = load_pattern(TANK_TOP_PATTERN)
+        assert pattern["garment_id"] == "tank_top_size_M"
+
+    def test_tank_top_seam_manifest_all_seams_valid(self):
+        with open(TANK_TOP_MANIFEST) as f:
+            manifest = json.load(f)
+        assert manifest["validation"]["all_seams_valid"] is True
+
+    def test_tank_top_seam_manifest_has_two_seam_pairs(self):
+        with open(TANK_TOP_MANIFEST) as f:
+            manifest = json.load(f)
+        assert manifest["validation"]["total_seam_pairs"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Dress (size M) fixture tests
+# ---------------------------------------------------------------------------
+
+DRESS_PATTERN = Path("data/patterns/dress_size_M.json")
+DRESS_MANIFEST = Path("data/seam_manifests/dress_size_M_seam_manifest.json")
+
+
+class TestDressPattern:
+
+    def test_dress_loads_without_error(self):
+        pattern = load_pattern(DRESS_PATTERN)
+        assert pattern is not None
+
+    def test_dress_has_four_panels_with_correct_names(self):
+        pattern = load_pattern(DRESS_PATTERN)
+        assert set(pattern["panels"].keys()) == {
+            "front_torso", "back_torso", "front_skirt", "back_skirt"
+        }
+
+    def test_dress_garment_id(self):
+        pattern = load_pattern(DRESS_PATTERN)
+        assert pattern["garment_id"] == "dress_gc_v1_size_M"
+
+    def test_dress_seam_manifest_all_seams_valid(self):
+        with open(DRESS_MANIFEST) as f:
+            manifest = json.load(f)
+        assert manifest["validation"]["all_seams_valid"] is True
+
+    def test_dress_seam_manifest_has_six_seam_pairs(self):
+        with open(DRESS_MANIFEST) as f:
+            manifest = json.load(f)
+        assert manifest["validation"]["total_seam_pairs"] == 6
