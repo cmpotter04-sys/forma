@@ -176,6 +176,14 @@ def generate_verdict(
             "verdict": ease_label,
         })
 
+    pressure_map = []
+    if "pressure_map" in sim_result:
+        for region, pressure in sim_result["pressure_map"].items():
+            pressure_map.append({
+                "region": region,
+                "pressure_n_mm2": round(float(pressure), 6),
+            })
+
     # fit = True iff zero regions are red (non-negotiable rule)
     fit = all(e["severity"] != "red" for e in strain_map)
 
@@ -190,6 +198,7 @@ def generate_verdict(
         "body_profile_id": body_profile_id,
         "strain_map": strain_map,
         "ease_map": ease_map,
+        "pressure_map": pressure_map,
         "simulation_ms": int(sim_result["simulation_ms"]),
         "convergence_step": int(sim_result["convergence_step"]),
         "final_kinetic_energy_j": float(sim_result["final_kinetic_energy_j"]),
@@ -342,6 +351,14 @@ def validate_verdict_schema(verdict: dict) -> list[str]:
                 errors.append(
                     f"ease_map region {r.get('region')!r}: "
                     f"invalid verdict {r.get('verdict')!r}"
+                )
+
+    # pressure_map — optional; validate structure if present
+    if "pressure_map" in verdict and verdict["pressure_map"]:
+        for entry in verdict["pressure_map"]:
+            if "region" not in entry or "pressure_n_mm2" not in entry:
+                errors.append(
+                    f"pressure_map entry missing 'region' or 'pressure_n_mm2': {entry!r}"
                 )
 
     # fit boolean consistency: fit=True iff no red regions
