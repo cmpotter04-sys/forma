@@ -63,11 +63,16 @@ def _load_fabric(fabric_id: str) -> dict:
     return library["fabrics"][fabric_id]
 
 
+_VALID_BODY_SOURCES = {"synthetic_mannequin", "standard_photo", "precision_suit"}
+
+
 def generate_verdict(
     sim_result: dict,
     garment_id: str,
     body_profile_id: str,
     fabric_id: str = "cotton_jersey_default",
+    body_source: str = "synthetic_mannequin",
+    confidence: Optional[float] = None,
 ) -> dict:
     """
     Assemble a fit_verdict.json v1.2 dict from simulation results.
@@ -92,11 +97,56 @@ def generate_verdict(
     fabric_id : str
         Key into fabric_library.json. Default: cotton_jersey_default.
 
+    body_source : str
+        One of "synthetic_mannequin", "standard_photo", "precision_suit".
+        REQUIRED — must be set explicitly for non-synthetic bodies.
+        (CLAUDE.md rule #3)
+
+    confidence : float | None
+        Caller-supplied confidence score. Must be None (auto) or in [0.0, 1.0].
+        Auto-rules (CLAUDE.md rule #1):
+          - synthetic_mannequin → always 1.0
+          - all other sources    → caller MUST supply a value < 1.0;
+                                   passing confidence=1.0 raises ValueError.
+
     Returns
     -------
     dict : complete fit_verdict.json v1.2 document
     """
     _validate_sim_result(sim_result)
+
+    # --- body_source validation (rule #3) ---
+    if body_source not in _VALID_BODY_SOURCES:
+        raise ValueError(
+            f"body_source must be one of {sorted(_VALID_BODY_SOURCES)}, "
+            f"got {body_source!r}"
+        )
+
+    # --- confidence enforcement (rule #1) ---
+    if body_source == "synthetic_mannequin":
+        if confidence is not None and confidence != 1.0:
+            raise ValueError(
+                "confidence must be 1.0 (or omitted) for synthetic_mannequin; "
+                f"got {confidence!r}"
+            )
+        resolved_confidence = 1.0
+    else:
+        # Non-synthetic body: caller must supply confidence and it must be < 1.0
+        if confidence is None:
+            raise ValueError(
+                f"confidence is required for body_source={body_source!r}. "
+                "Pass a float in [0.0, 1.0) derived from scan accuracy."
+            )
+        if confidence == 1.0:
+            raise ValueError(
+                f"confidence=1.0 is only valid for synthetic_mannequin, "
+                f"not for body_source={body_source!r} (CLAUDE.md rule #1)"
+            )
+        if not 0.0 <= confidence <= 1.0:
+            raise ValueError(
+                f"confidence must be in [0.0, 1.0], got {confidence!r}"
+            )
+        resolved_confidence = float(confidence)
 
     clearance_map: dict[str, float] = sim_result["clearance_map"]
     strain_ratio_map: dict[str, float] = sim_result.get("strain_ratio_map", {})
@@ -128,16 +178,12 @@ def generate_verdict(
     # fit = True iff zero regions are red (non-negotiable rule)
     fit = all(e["severity"] != "red" for e in strain_map)
 
-    # confidence = 1.0 for synthetic_mannequin ONLY
-    # For photo-based bodies: f(scan_accuracy_mm, strain_magnitude, body_region)
-    confidence = 1.0  # synthetic_mannequin — see CLAUDE.md rule #1
-
     verdict = {
         "verdict_id": f"vrd_{uuid.uuid4().hex[:12]}",
         "fit": fit,
-        "confidence": confidence,
-        "body_source": "synthetic_mannequin",
-        "scan_method": "synthetic_mannequin",
+        "confidence": resolved_confidence,
+        "body_source": body_source,
+        "scan_method": body_source,
         "scan_accuracy_mm": 0,
         "garment_id": garment_id,
         "body_profile_id": body_profile_id,

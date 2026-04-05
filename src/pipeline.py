@@ -116,9 +116,22 @@ def run_fit_check(
 
     if anny_measurements is not None:
         from sculptor.anny_body import generate_anny_body
+        import numpy as np
+        import trimesh as _trimesh
         _tmp_file = tempfile.NamedTemporaryFile(suffix=".ply", delete=False)
         _tmp_file.close()  # close so generate_anny_body can write to it on all platforms
-        generate_anny_body(**anny_measurements, output_path=_tmp_file.name)
+        anny_mesh = generate_anny_body(**anny_measurements)
+
+        # Anny uses Z-up (X=left-right, Y=forward, Z=height). The rest of the
+        # pipeline (garment_assembly, xpbd_simulate) assumes Y-up (X=left-right,
+        # Y=height, Z=forward).  Swap Y and Z axes here so the saved PLY is
+        # already in the expected coordinate frame.
+        v = np.array(anny_mesh.vertices)
+        v_yup = v[:, [0, 2, 1]]      # X unchanged; new Y = old Z; new Z = old Y
+        mesh_yup = _trimesh.Trimesh(vertices=v_yup, faces=anny_mesh.faces, process=True)
+        _trimesh.repair.fix_normals(mesh_yup)
+        mesh_yup.export(_tmp_file.name)
+
         body_mesh_path = _tmp_file.name
         body_source_override = "anny_parametric"
 

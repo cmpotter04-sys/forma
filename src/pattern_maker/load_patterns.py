@@ -236,13 +236,14 @@ def _validate_raw(raw: dict, path: Path) -> None:
 
 def load_all_sizes(patterns_dir: str | Path = "data/patterns") -> dict[str, dict]:
     """
-    Load S, M, XL T-shirt patterns from the patterns directory.
+    Load XS, S, M, L, XL T-shirt patterns from the patterns directory.
 
-    Returns: {"S": pattern_dict, "M": pattern_dict, "XL": pattern_dict}
+    Returns: {"XS": pattern_dict, "S": pattern_dict, "M": pattern_dict,
+              "L": pattern_dict, "XL": pattern_dict}
     """
     patterns_dir = Path(patterns_dir)
     result = {}
-    for size in ("S", "M", "XL"):
+    for size in ("XS", "S", "M", "L", "XL"):
         fname = patterns_dir / f"tshirt_size_{size}.json"
         result[size] = load_pattern(fname)
     return result

@@ -47,6 +47,10 @@ data/cache/
 *.npz
 
 # Ruflo runtime
+.swarm/
+.claude/memory.db
+.claude-flow/daemon.pid
+.claude-flow/swarm/
 .claude-flow/logs/
 .claude-flow/data/
 .claude-flow/sessions/

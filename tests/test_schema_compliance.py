@@ -218,6 +218,22 @@ class TestEnumValidation:
         assert verdicts[size]["scan_method"] == "synthetic_mannequin"
         assert verdicts[size]["scan_accuracy_mm"] == 0
 
+    def test_body_source_propagates_to_verdict(self):
+        """body_source parameter must appear verbatim in the verdict (CLAUDE.md rule #3)."""
+        verdict = generate_verdict(
+            _SIM_RESULTS["M"], "test_id", "body_id",
+            body_source="precision_suit",
+            confidence=0.95,
+        )
+        assert verdict["body_source"] == "precision_suit", \
+            f"Expected body_source='precision_suit', got {verdict['body_source']!r}"
+
+    def test_body_source_is_always_present(self):
+        """body_source is REQUIRED — must never be absent from a generated verdict."""
+        verdict = generate_verdict(_SIM_RESULTS["M"], "test_id", "body_id")
+        assert "body_source" in verdict, "body_source missing from verdict"
+        assert verdict["body_source"] is not None
+
 
 # ---------------------------------------------------------------------------
 # AC-5.4: Severity thresholds (FORMA_WEEK1_SPEC.md)
@@ -296,6 +312,69 @@ class TestConfidence:
         assert verdicts[size]["confidence"] == 1.0, \
             f"Size {size}: confidence={verdicts[size]['confidence']}, expected 1.0 " \
             "for synthetic_mannequin"
+
+    def test_non_synthetic_with_confidence_1_raises(self):
+        """confidence=1.0 on a non-synthetic body is forbidden (CLAUDE.md rule #1)."""
+        with pytest.raises(ValueError, match="confidence=1.0"):
+            generate_verdict(
+                _SIM_RESULTS["M"], "test_id", "body_id",
+                body_source="standard_photo",
+                confidence=1.0,
+            )
+
+    def test_non_synthetic_without_confidence_raises(self):
+        """Omitting confidence for a non-synthetic body is forbidden (CLAUDE.md rule #1)."""
+        with pytest.raises(ValueError, match="confidence is required"):
+            generate_verdict(
+                _SIM_RESULTS["M"], "test_id", "body_id",
+                body_source="standard_photo",
+                confidence=None,
+            )
+
+    def test_non_synthetic_valid_confidence_accepted(self):
+        """Non-synthetic body with a valid sub-1.0 confidence must succeed."""
+        verdict = generate_verdict(
+            _SIM_RESULTS["M"], "test_id", "body_id",
+            body_source="standard_photo",
+            confidence=0.82,
+        )
+        assert verdict["confidence"] == 0.82
+        assert verdict["body_source"] == "standard_photo"
+
+    def test_non_synthetic_confidence_out_of_range_raises(self):
+        """confidence outside [0.0, 1.0] must be rejected."""
+        with pytest.raises(ValueError):
+            generate_verdict(
+                _SIM_RESULTS["M"], "test_id", "body_id",
+                body_source="precision_suit",
+                confidence=1.5,
+            )
+
+    def test_invalid_body_source_raises(self):
+        """An unrecognised body_source must be rejected (CLAUDE.md rule #3)."""
+        with pytest.raises(ValueError, match="body_source"):
+            generate_verdict(
+                _SIM_RESULTS["M"], "test_id", "body_id",
+                body_source="lidar_scan",
+            )
+
+    def test_synthetic_with_explicit_confidence_1_accepted(self):
+        """Explicitly passing confidence=1.0 for synthetic_mannequin is fine."""
+        verdict = generate_verdict(
+            _SIM_RESULTS["M"], "test_id", "body_id",
+            body_source="synthetic_mannequin",
+            confidence=1.0,
+        )
+        assert verdict["confidence"] == 1.0
+
+    def test_synthetic_non_1_confidence_raises(self):
+        """Passing confidence != 1.0 for synthetic_mannequin must raise."""
+        with pytest.raises(ValueError):
+            generate_verdict(
+                _SIM_RESULTS["M"], "test_id", "body_id",
+                body_source="synthetic_mannequin",
+                confidence=0.9,
+            )
 
 
 # ---------------------------------------------------------------------------

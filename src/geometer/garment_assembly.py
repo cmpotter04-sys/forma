@@ -235,10 +235,16 @@ def place_sleeve_at_armhole(
 
     # Build a pair of basis vectors perpendicular to arm_dir for cylinder wrapping.
     # u_perp: used for sin(angle) component; v_perp: used for cos(angle) component.
+    #
+    # Use Gram-Schmidt to project world_up onto the plane perpendicular to arm_dir,
+    # giving u_perp ≈ "world up" in the arm's cross-section.  For a horizontal arm
+    # ([±1,0,0]) this exactly reproduces u_perp = [0,1,0] (Y/up) and
+    # v_perp = [0,0,±1] (Z/forward), matching the original Phase-1 cylinder wrapping
+    # where sin(angle) drove the Y component and cos(angle) drove the Z component.
     world_up = np.array([0.0, 1.0, 0.0])
     if abs(np.dot(arm_dir, world_up)) > 0.9:
         world_up = np.array([0.0, 0.0, 1.0])
-    u_perp = np.cross(arm_dir, world_up)
+    u_perp = world_up - np.dot(world_up, arm_dir) * arm_dir
     u_perp /= np.linalg.norm(u_perp) + 1e-10
     v_perp = np.cross(arm_dir, u_perp)
     v_perp /= np.linalg.norm(v_perp) + 1e-10
