@@ -69,13 +69,22 @@ SUPPORTED_GARMENTS: dict[str, dict] = {
         "pattern_prefix": "js_mean_all_specification",
         "patterns_dir": "data/garmentcode_assets/Patterns",
     },
-    # ---- Placeholder entries — pattern files do not exist yet ---------------
-    # Uncomment and supply pattern_prefix when sized pattern files are generated.
-    # "trousers": {
-    #     "sizes": ["XS", "S", "M", "L", "XL"],
-    #     "pattern_prefix": "trousers_size_",
-    #     "patterns_dir": "data/patterns",
-    # },
+    # ---- Hand-crafted sized fixtures (data/patterns/) -----------------------
+    "tank_top": {
+        "sizes": ["M"],
+        "pattern_prefix": "tank_top_size_",
+        "patterns_dir": "data/patterns",
+    },
+    "dress_v1": {
+        "sizes": ["M"],
+        "pattern_prefix": "dress_size_",
+        "patterns_dir": "data/patterns",
+    },
+    "trousers": {
+        "sizes": ["M"],
+        "pattern_prefix": "trousers_size_",
+        "patterns_dir": "data/patterns",
+    },
 }
 
 
