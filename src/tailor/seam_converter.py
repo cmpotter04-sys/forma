@@ -205,6 +205,19 @@ def build_seam_manifest(pattern: dict) -> dict:
     # --- 5. Resample paired edges to equal vertex counts -------------------
     _resample_paired_edges(edge_polylines, seam_pairs)
 
+    # --- 5b. Sync vertices arrays in panels_out to post-resample lengths ----
+    # Build a lookup: edge_id → panel index + edge index in panels_out
+    _edge_to_panel_edge: dict[str, tuple[int, int]] = {}
+    for pi, p in enumerate(panels_out):
+        for ei, e in enumerate(p["edges"]):
+            _edge_to_panel_edge[e["edge_id"]] = (pi, ei)
+
+    for eid, poly in edge_polylines.items():
+        if eid not in _edge_to_panel_edge:
+            continue
+        pi, ei = _edge_to_panel_edge[eid]
+        panels_out[pi]["edges"][ei]["vertices"] = list(range(len(poly)))
+
     # --- 6. Build validation record ----------------------------------------
     max_diff = max((sp["arc_length_diff_mm"] for sp in seam_pairs), default=0.0)
     validation = {
@@ -300,28 +313,118 @@ def _validate_manifest_schema(manifest: dict, path) -> None:
         if field not in manifest:
             raise SeamValidationError(f"{path}: missing field '{field}'")
 
-    # Build edge id set
-    edge_ids: set[str] = set()
+    # Rule: panel_count must match actual panels array length
+    actual_panel_count = len(manifest["panels"])
+    if manifest["panel_count"] != actual_panel_count:
+        raise SeamValidationError(
+            f"{path}: panel_count={manifest['panel_count']} does not match "
+            f"actual panels array length={actual_panel_count}"
+        )
+
+    # Rule: total_seam_pairs must match actual seam_pairs array length
+    actual_pair_count = len(manifest["seam_pairs"])
+    stated_pair_count = manifest["validation"].get("total_seam_pairs")
+    if stated_pair_count != actual_pair_count:
+        raise SeamValidationError(
+            f"{path}: validation.total_seam_pairs={stated_pair_count} does not match "
+            f"actual seam_pairs array length={actual_pair_count}"
+        )
+
+    # Build edge id → vertex count map; validate edge_id format
+    import re as _re
+    edge_ids: dict[str, int] = {}
     for panel in manifest["panels"]:
+        panel_id = panel["panel_id"]
+        # Validate required panel fields
+        for pf in ("panel_id", "vertex_count", "edge_count", "edges"):
+            if pf not in panel:
+                raise SeamValidationError(f"{path}: panel missing field '{pf}'")
         for edge in panel["edges"]:
-            edge_ids.add(edge["edge_id"])
+            # Validate required edge fields
+            for ef in ("edge_id", "vertices", "arc_length_mm", "label"):
+                if ef not in edge:
+                    raise SeamValidationError(
+                        f"{path}: edge in panel '{panel_id}' missing field '{ef}'"
+                    )
+            eid = edge["edge_id"]
+            # Rule: edge_id must follow {panel_id}_e{index} format
+            if not _re.fullmatch(r".+_e\d+", eid):
+                raise SeamValidationError(
+                    f"{path}: edge_id {eid!r} does not match expected format "
+                    f"'{{panel_id}}_e{{index}}'"
+                )
+            edge_ids[eid] = len(edge["vertices"])
 
     seen: set[str] = set()
     failing = []
+    computed_max_diff = 0.0
     for sp in manifest["seam_pairs"]:
+        # Validate required seam_pair fields
+        for sf in ("seam_id", "edge_a", "edge_b", "arc_length_diff_mm", "valid", "stitch_type"):
+            if sf not in sp:
+                raise SeamValidationError(f"{path}: seam pair missing field '{sf}'")
+
+        # Rule: seam_id must follow seam_NNN format
+        if not _re.fullmatch(r"seam_\d{3,}", sp["seam_id"]):
+            raise SeamValidationError(
+                f"{path}: seam_id {sp['seam_id']!r} does not match expected format 'seam_NNN'"
+            )
+
+        # Rule 2: no orphan references
         if sp["edge_a"] not in edge_ids:
             raise SeamValidationError(f"Orphan edge reference: {sp['edge_a']!r}")
         if sp["edge_b"] not in edge_ids:
             raise SeamValidationError(f"Orphan edge reference: {sp['edge_b']!r}")
+
+        # Rule 3: no duplicate assignments
         for eid in (sp["edge_a"], sp["edge_b"]):
             if eid in seen:
                 raise SeamValidationError(f"Duplicate edge in seam pairs: {eid!r}")
             seen.add(eid)
+
+        # Rule 1: arc length tolerance
         tol = GATHER_TOLERANCE_MM if sp["stitch_type"] == "gather" else TOLERANCE_MM
         if sp["arc_length_diff_mm"] >= tol:
             failing.append(sp["seam_id"])
 
+        # Rule: stitch_type must be a known value
+        if sp["stitch_type"] not in ("standard", "gather"):
+            raise SeamValidationError(
+                f"{path}: seam {sp['seam_id']!r} has unknown stitch_type "
+                f"{sp['stitch_type']!r} (must be 'standard' or 'gather')"
+            )
+
+        # Rule 5: vertex count compatibility between paired edges
+        vcount_a = edge_ids[sp["edge_a"]]
+        vcount_b = edge_ids[sp["edge_b"]]
+        if vcount_a != vcount_b:
+            raise SeamValidationError(
+                f"{path}: seam {sp['seam_id']!r} vertex count mismatch — "
+                f"{sp['edge_a']} has {vcount_a} vertices, "
+                f"{sp['edge_b']} has {vcount_b} vertices"
+            )
+
+        diff = sp["arc_length_diff_mm"]
+        if diff > computed_max_diff:
+            computed_max_diff = diff
+
     if failing:
         raise SeamValidationError(
             f"Seams exceed tolerance: {failing}", failing_seams=failing
+        )
+
+    # Rule: all_seams_valid must be consistent with actual pair states
+    actual_all_valid = len(failing) == 0
+    if manifest["validation"].get("all_seams_valid") != actual_all_valid:
+        raise SeamValidationError(
+            f"{path}: validation.all_seams_valid={manifest['validation']['all_seams_valid']} "
+            f"is inconsistent with actual seam pair states (expected {actual_all_valid})"
+        )
+
+    # Rule: max_arc_length_diff_mm must be consistent (within floating-point rounding)
+    stated_max = manifest["validation"].get("max_arc_length_diff_mm", 0.0)
+    if abs(stated_max - computed_max_diff) > 0.001:
+        raise SeamValidationError(
+            f"{path}: validation.max_arc_length_diff_mm={stated_max} does not match "
+            f"computed maximum={computed_max_diff:.3f}"
         )

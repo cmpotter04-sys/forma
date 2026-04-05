@@ -5,6 +5,9 @@ Scales a GarmentCode pattern JSON by a uniform factor.
 Multiplies all vertex coordinates and translation values by scale_factor.
 Does NOT scale rotation values.
 Edge curvature control points are relative (fractions), so they don't need scaling.
+
+scale_pattern_to_measurements() bridges body measurements → scale_factor by
+comparing chest_cm against the pattern's reference_measurements (fallback: 88 cm).
 """
 
 from __future__ import annotations
@@ -12,6 +15,12 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+
+__all__ = ["scale_pattern", "scale_pattern_to_measurements"]
+
+# Default M-size reference chest used when the pattern JSON lacks
+# a reference_measurements block (all current tshirt patterns).
+_DEFAULT_REFERENCE_CHEST_CM = 88.0
 
 
 def scale_pattern(input_path: str | Path, output_path: str | Path, scale_factor: float) -> None:
@@ -80,3 +89,37 @@ def scale_pattern(input_path: str | Path, output_path: str | Path, scale_factor:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(scaled, f, indent=2)
+
+    return scaled.get("_forma_metadata", {})
+
+
+def scale_pattern_to_measurements(
+    input_path: str,
+    output_path: str,
+    chest_cm: float,
+    waist_cm: float = None,   # optional, used for waist-dominant garments
+    inseam_cm: float = None,  # optional, used for trousers  # noqa: ARG001
+) -> dict:
+    """
+    Scale a pattern to fit target body measurements.
+
+    Derives scale_factor from chest_cm vs the pattern's reference chest measurement.
+    Falls back to waist_cm or a 1.0 factor if reference measurements not found.
+
+    Returns the metadata dict from the scaled pattern.
+    """
+    input_path = Path(input_path)
+
+    with open(input_path) as f:
+        pattern = json.load(f)
+
+    ref = pattern.get("_forma_metadata", {}).get("reference_measurements", {})
+
+    if ref.get("chest_cm"):
+        scale_factor = chest_cm / ref["chest_cm"]
+    elif waist_cm is not None and ref.get("waist_cm"):
+        scale_factor = waist_cm / ref["waist_cm"]
+    else:
+        scale_factor = chest_cm / _DEFAULT_REFERENCE_CHEST_CM
+
+    return scale_pattern(input_path, output_path, scale_factor)

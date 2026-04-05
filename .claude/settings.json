@@ -14,7 +14,20 @@
       "Bash(npx claude-flow*)",
       "Bash(node .claude/*)",
       "mcp__claude-flow__:*",
-      "Bash(gh repo:*)"
+      "Bash(gh repo:*)",
+      "Bash(pip install:*)",
+      "Bash(kaggle kernels:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(curl -s --user \"cmpotter04-sys:KGAT_cc63c75741493d80bf815bf93da3ef3e\" https://www.kaggle.com/api/v1/kernels)",
+      "Bash(kaggle --version)",
+      "Bash(pip show:*)",
+      "Bash(curl -s -X GET https://www.kaggle.com/api/v1/competitions/list -H 'Authorization: Bearer KGAT_cc63c75741493d80bf815bf93da3ef3e' -H 'Content-Type: application/json')",
+      "Bash(python3)",
+      "Bash(python -c \"import trimesh; print\\(trimesh.__version__\\); m = trimesh.creation.cylinder\\(1,1\\); print\\([x for x in dir\\(m\\) if 'duplic' in x.lower\\(\\) or 'degen' in x.lower\\(\\) or 'repair' in x.lower\\(\\)]\\)\")",
+      "Bash(python -c \"import trimesh; print\\([x for x in dir\\(trimesh.repair\\) if not x.startswith\\('_'\\)]\\)\")",
+      "Bash(python -c ':*)",
+      "Bash(python -m pytest tests/test_anny_body.py --collect-only -q)",
+      "Bash(python -m pytest tests/test_anny_body.py -v)"
     ],
     "deny": [
       "Read(./.env)",
