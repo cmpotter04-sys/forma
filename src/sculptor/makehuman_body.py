@@ -189,6 +189,7 @@ def generate_body(
     output_path: str | Path,
     shoulder_width_cm: float = 44.0,
     inseam_cm: float = 82.0,
+    gender: str = "male",
 ) -> dict:
     """
     Generate a MakeHuman body mesh at the given measurements.
@@ -211,9 +212,9 @@ def generate_body(
     vertices = np.array(mesh.vertices, dtype=np.float64)
     faces = np.array(mesh.faces, dtype=np.int32)
 
-    # 2. Apply caucasian-male-young macro morph
+    # 2. Apply gender macro morph (caucasian-{gender}-young)
     targets = np.load(str(TARGETS_NPZ), allow_pickle=True)
-    _apply_target(vertices, targets, "targets/macrodetails/caucasian-male-young", 1.0)
+    _apply_target(vertices, targets, f"targets/macrodetails/caucasian-{gender}-young", 1.0)
 
     # 3. Convert dm → m, scale to target height, recenter
     vertices *= MH_UNIT_SCALE
@@ -319,31 +320,40 @@ BODY_SIZES = {
     "XL": {"chest_cm": 108, "waist_cm": 96, "hip_cm": 105, "height_cm": 185},
 }
 
+# ISO 8559 female reference measurements
+BODY_SIZES_FEMALE = {
+    "S":  {"chest_cm": 84,  "waist_cm": 66, "hip_cm": 90,  "height_cm": 163},
+    "M":  {"chest_cm": 92,  "waist_cm": 74, "hip_cm": 98,  "height_cm": 167},
+    "XL": {"chest_cm": 104, "waist_cm": 86, "hip_cm": 110, "height_cm": 172},
+}
 
-def generate_all_bodies(output_dir: Path | None = None) -> dict[str, dict]:
-    """Generate S, M, XL body meshes. Returns dict of size → profile."""
+
+def generate_all_bodies(output_dir: Path | None = None, include_female: bool = True) -> dict[str, dict]:
+    """Generate S, M, XL body meshes for male (and optionally female). Returns dict of key → profile."""
     if output_dir is None:
         output_dir = ROOT / "data" / "bodies"
 
     results = {}
-    for size, params in BODY_SIZES.items():
-        output_path = output_dir / f"makehuman_male_{size}.ply"
-        print(f"\n{'='*60}")
-        print(f"  Generating size {size} body: {params}")
-        print(f"{'='*60}")
+    sizes_by_gender = [("male", BODY_SIZES), ("female", BODY_SIZES_FEMALE)] if include_female else [("male", BODY_SIZES)]
 
-        profile = generate_body(output_path=output_path, **params)
+    for gender, sizes in sizes_by_gender:
+        for size, params in sizes.items():
+            output_path = output_dir / f"makehuman_{gender}_{size}.ply"
+            print(f"\n{'='*60}")
+            print(f"  Generating {gender} size {size}: {params}")
+            print(f"{'='*60}")
 
-        ach = profile["achieved_measurements"]
-        print(f"  Height:  {ach['height_cm']:.2f} cm  (target {params['height_cm']})")
-        print(f"  Chest:   {ach['chest_cm']:.2f} cm  (target {params['chest_cm']})")
-        print(f"  Waist:   {ach['waist_cm']:.2f} cm  (target {params['waist_cm']})")
-        print(f"  Hip:     {ach['hip_cm']:.2f} cm  (target {params['hip_cm']})")
-        print(f"  Max err: {profile['max_measurement_error_mm']:.1f} mm")
-        print(f"  Verts:   {profile['vertex_count']}")
-        print(f"  Saved:   {output_path}")
+            profile = generate_body(output_path=output_path, gender=gender, **params)
 
-        results[size] = profile
+            ach = profile["achieved_measurements"]
+            print(f"  Height:  {ach['height_cm']:.2f} cm  (target {params['height_cm']})")
+            print(f"  Chest:   {ach['chest_cm']:.2f} cm  (target {params['chest_cm']})")
+            print(f"  Waist:   {ach['waist_cm']:.2f} cm  (target {params['waist_cm']})")
+            print(f"  Hip:     {ach['hip_cm']:.2f} cm  (target {params['hip_cm']})")
+            print(f"  Max err: {profile['max_measurement_error_mm']:.1f} mm")
+            print(f"  Saved:   {output_path}")
+
+            results[f"{gender}_{size}"] = profile
 
     return results
 

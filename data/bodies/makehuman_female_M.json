@@ -1,0 +1,30 @@
+{
+  "body_profile_id": "makehuman_female_M",
+  "body_source": "synthetic_mannequin",
+  "scan_method": "synthetic_mannequin",
+  "scan_accuracy_mm": 0,
+  "confidence": 1.0,
+  "measurements": {
+    "height_cm": 167,
+    "chest_cm": 92,
+    "waist_cm": 74,
+    "hip_cm": 98,
+    "shoulder_width_cm": 44.0,
+    "inseam_cm": 82.0
+  },
+  "achieved_measurements": {
+    "height_cm": 167.0,
+    "chest_cm": 93.53,
+    "waist_cm": 73.94,
+    "hip_cm": 98.0,
+    "shoulder_width_cm": 44.0,
+    "inseam_cm": 82.0
+  },
+  "smplx_betas": null,
+  "max_measurement_error_mm": 15.3,
+  "mesh_path": "data/bodies/makehuman_female_M.ply",
+  "created_at": "2026-04-05T19:00:52.971839+00:00",
+  "mesh_source": "makehuman_cc0_base_with_xz_scaling",
+  "vertex_count": 21833,
+  "face_count": 36972
+}
