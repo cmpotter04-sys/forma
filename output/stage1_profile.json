@@ -1,0 +1,34 @@
+{
+  "_note": "PLACEHOLDER — populate by running tests/test_warp_smoke_100k.py on Colab T4 GPU",
+  "stage": 1,
+  "generated_at": null,
+  "environment": {
+    "device": null,
+    "warp_version": null,
+    "cuda_version": null,
+    "gpu_name": null,
+    "vram_gb": null
+  },
+  "baseline_22k": {
+    "vertex_count_body": 21833,
+    "vertex_count_garment": null,
+    "cpu_simulation_ms": null,
+    "warp_simulation_ms": null,
+    "clearance_max_delta_mm": null,
+    "strain_ratio_max_delta": null,
+    "verdict_match": null
+  },
+  "smoke_100k": {
+    "vertex_count_body": null,
+    "vertex_count_garment": null,
+    "warp_simulation_ms": null,
+    "vram_peak_mb": null,
+    "clearance_vs_22k_max_delta_mm": null,
+    "bottleneck": null
+  },
+  "acceptance_criteria": {
+    "ac1_clearance_delta_le_05mm": null,
+    "ac2_100k_runs_without_oom": null,
+    "ac3_parity_tests_pass": null
+  }
+}

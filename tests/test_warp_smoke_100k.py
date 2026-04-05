@@ -32,7 +32,7 @@ pytestmark = pytest.mark.skipif(
 
 BODY_M_PLY = ROOT / "data" / "bodies" / "makehuman_male_M.ply"
 PATTERN_M = ROOT / "data" / "patterns" / "tshirt_size_M.json"
-MANIFEST_M = ROOT / "seam_manifests" / "tshirt_size_M_manifest.json"
+MANIFEST_M = ROOT / "data" / "seam_manifests" / "tshirt_size_M_seam_manifest.json"
 FABRIC_LIB = ROOT / "data" / "fabrics" / "fabric_library.json"
 
 
