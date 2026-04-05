@@ -8,16 +8,75 @@ GarmentCode JSON structure:
   pattern.panels: dict[panel_name -> {vertices, edges, translation, rotation}]
   pattern.stitches: list of [{panel, edge}, {panel, edge}] pairs
   properties.units_in_meter: int (100 = coords in cm, multiply *10 for mm)
+
+Multi-garment support:
+  Use load_garment(garment_type, size) to load any supported garment.
+  SUPPORTED_GARMENTS maps garment type → {sizes, pattern_prefix, patterns_dir}.
+  Sized garments (tshirt) live in data/patterns/.
+  Single-size specification garments (dress, shirt, hoody, jumpsuit) live in
+  data/garmentcode_assets/Patterns/ and expose only "default" as their size.
 """
 
 from __future__ import annotations
 import json
 import math
 from pathlib import Path
-from typing import Optional
 
 # units_in_meter = 100 means 1 unit = 1 cm → multiply by 10 to get mm
 _MM_PER_UNIT = 10.0
+
+# ---------------------------------------------------------------------------
+# Supported garment registry
+#
+# Each entry describes where to find pattern files and which sizes are valid.
+#
+# "pattern_prefix"  : filename prefix; the size string is appended before ".json"
+#                     e.g. "tshirt_size_" + "M" → "tshirt_size_M.json"
+# "sizes"           : list of valid size strings
+# "patterns_dir"    : path relative to the repo root where the files live
+#
+# For single-spec garments (dress, shirt, etc.) the only valid size is "default"
+# and the full filename is just pattern_prefix + "default" (no suffix appended) —
+# see load_garment() for the exact resolution logic.
+# ---------------------------------------------------------------------------
+SUPPORTED_GARMENTS: dict[str, dict] = {
+    "tshirt": {
+        "sizes": ["XS", "S", "M", "L", "XL"],
+        "pattern_prefix": "tshirt_size_",
+        "patterns_dir": "data/patterns",
+    },
+    # ---- Single-size specification garments (GarmentCode mean bodies) -------
+    # These ship as one reference-size JSON in data/garmentcode_assets/Patterns/.
+    # Per-size variants are deferred until GarmentCode parametric generation is
+    # wired into the pipeline (Phase 2 Stage 3+).
+    "dress": {
+        "sizes": ["default"],
+        "pattern_prefix": "dress_pencil_specification",
+        "patterns_dir": "data/garmentcode_assets/Patterns",
+    },
+    "shirt": {
+        "sizes": ["default"],
+        "pattern_prefix": "shirt_mean_specification",
+        "patterns_dir": "data/garmentcode_assets/Patterns",
+    },
+    "hoody": {
+        "sizes": ["default"],
+        "pattern_prefix": "hoody_mean_specification",
+        "patterns_dir": "data/garmentcode_assets/Patterns",
+    },
+    "jumpsuit": {
+        "sizes": ["default"],
+        "pattern_prefix": "js_mean_all_specification",
+        "patterns_dir": "data/garmentcode_assets/Patterns",
+    },
+    # ---- Placeholder entries — pattern files do not exist yet ---------------
+    # Uncomment and supply pattern_prefix when sized pattern files are generated.
+    # "trousers": {
+    #     "sizes": ["XS", "S", "M", "L", "XL"],
+    #     "pattern_prefix": "trousers_size_",
+    #     "patterns_dir": "data/patterns",
+    # },
+}
 
 
 class PatternLoadError(Exception):
@@ -234,16 +293,143 @@ def _validate_raw(raw: dict, path: Path) -> None:
         raise PatternLoadError(f"{path}: pattern.panels is empty")
 
 
-def load_all_sizes(patterns_dir: str | Path = "data/patterns") -> dict[str, dict]:
+def load_garment(
+    garment_type: str,
+    size: str,
+    repo_root: str | Path | None = None,
+) -> dict:
     """
-    Load XS, S, M, L, XL T-shirt patterns from the patterns directory.
+    Load the pattern for any supported garment type + size combination.
 
-    Returns: {"XS": pattern_dict, "S": pattern_dict, "M": pattern_dict,
-              "L": pattern_dict, "XL": pattern_dict}
+    Parameters
+    ----------
+    garment_type : str
+        Must be a key in SUPPORTED_GARMENTS (e.g. "tshirt", "dress", "shirt").
+    size : str
+        Must be in SUPPORTED_GARMENTS[garment_type]["sizes"].
+        For single-size spec garments the only valid value is "default".
+    repo_root : str | Path | None
+        Absolute path to the repository root.  If None, the path is resolved
+        relative to this source file's location (../../.. from src/pattern_maker/).
+
+    Returns
+    -------
+    dict — same structure as load_pattern().
+
+    Raises
+    ------
+    PatternLoadError
+        If garment_type is unsupported, size is invalid, or the pattern file
+        does not exist or fails schema validation.
     """
-    patterns_dir = Path(patterns_dir)
+    if garment_type not in SUPPORTED_GARMENTS:
+        supported = ", ".join(sorted(SUPPORTED_GARMENTS))
+        raise PatternLoadError(
+            f"Unsupported garment type {garment_type!r}. "
+            f"Supported types: {supported}"
+        )
+
+    spec = SUPPORTED_GARMENTS[garment_type]
+    valid_sizes = spec["sizes"]
+    if size not in valid_sizes:
+        raise PatternLoadError(
+            f"Invalid size {size!r} for garment {garment_type!r}. "
+            f"Valid sizes: {valid_sizes}"
+        )
+
+    if repo_root is None:
+        # src/pattern_maker/load_patterns.py → go up two levels to repo root
+        repo_root = Path(__file__).resolve().parent.parent.parent
+
+    repo_root = Path(repo_root)
+    patterns_dir = repo_root / spec["patterns_dir"]
+    prefix = spec["pattern_prefix"]
+
+    # Single-size spec garments: filename IS the prefix (no size suffix)
+    # Sized garments: filename = prefix + size + ".json"
+    if valid_sizes == ["default"]:
+        fname = patterns_dir / f"{prefix}.json"
+    else:
+        fname = patterns_dir / f"{prefix}{size}.json"
+
+    if not fname.exists():
+        raise PatternLoadError(
+            f"Pattern file not found for {garment_type!r} size {size!r}: {fname}"
+        )
+
+    return load_pattern(fname)
+
+
+def load_all_sizes(
+    garment_type_or_dir: "str | Path" = "tshirt",
+    patterns_dir: "str | Path | None" = None,
+) -> dict[str, dict]:
+    """
+    Load all size variants for a supported garment type.
+
+    Parameters
+    ----------
+    garment_type_or_dir : str | Path
+        Either a garment type key from SUPPORTED_GARMENTS (e.g. "tshirt"),
+        OR a Path / str pointing to a patterns directory — the legacy calling
+        convention (load_all_sizes("data/patterns")).  When a Path or a string
+        that is not a SUPPORTED_GARMENTS key is supplied, the function treats it
+        as a patterns directory and loads T-shirt sizes from that directory,
+        preserving backwards compatibility.
+    patterns_dir : str | Path | None
+        Explicit override for the patterns directory.  When supplied together
+        with a garment_type string, this directory is used instead of the
+        registry default.
+
+    Returns
+    -------
+    dict mapping size string → pattern dict
+    e.g. {"XS": {...}, "S": {...}, "M": {...}, "L": {...}, "XL": {...}}
+
+    Notes
+    -----
+    Calling load_all_sizes() with no arguments still loads all T-shirt sizes
+    from data/patterns/, identical to the Phase 1 behaviour.
+    """
+    # --- Backwards-compatibility shim ----------------------------------------
+    # Old callers pass a Path or a directory string as the first positional arg.
+    first = garment_type_or_dir
+    if isinstance(first, Path) or (
+        isinstance(first, str) and first not in SUPPORTED_GARMENTS
+    ):
+        # Legacy call: load_all_sizes(patterns_dir)
+        base_dir = Path(first)
+        spec = SUPPORTED_GARMENTS["tshirt"]
+        result = {}
+        for size in spec["sizes"]:
+            fname = base_dir / f"{spec['pattern_prefix']}{size}.json"
+            result[size] = load_pattern(fname)
+        return result
+    # -------------------------------------------------------------------------
+
+    garment_type = str(first)
+    if garment_type not in SUPPORTED_GARMENTS:
+        supported = ", ".join(sorted(SUPPORTED_GARMENTS))
+        raise PatternLoadError(
+            f"Unsupported garment type {garment_type!r}. "
+            f"Supported types: {supported}"
+        )
+
+    spec = SUPPORTED_GARMENTS[garment_type]
+
+    # Resolve the patterns directory
+    if patterns_dir is not None:
+        base_dir = Path(patterns_dir)
+    else:
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        base_dir = repo_root / spec["patterns_dir"]
+
     result = {}
-    for size in ("XS", "S", "M", "L", "XL"):
-        fname = patterns_dir / f"tshirt_size_{size}.json"
+    for size in spec["sizes"]:
+        prefix = spec["pattern_prefix"]
+        if spec["sizes"] == ["default"]:
+            fname = base_dir / f"{prefix}.json"
+        else:
+            fname = base_dir / f"{prefix}{size}.json"
         result[size] = load_pattern(fname)
     return result

@@ -23,7 +23,8 @@ The single-particle gradient is:
 
 The XPBD correction (Macklin 2016, eq. 4) reduces to:
 
-    delta_p = -C(p) / (w + alpha_tilde) * grad_C(p)
+    delta_lambda = -C(p) / (w + alpha_tilde)
+    delta_p      = w * delta_lambda * grad_C(p)
 
 where:
     w           = inv_mass of the particle
@@ -112,7 +113,8 @@ def get_kernel():
         The constraint function is C(p) = ||p - anchor||.
         The correction is:
 
-            delta_p = -C / (w + alpha_tilde) * grad_C
+            delta_lambda = -C / (w + alpha_tilde)
+            delta_p      = w * delta_lambda * grad_C
 
         where:
             C           = distance from particle to anchor
