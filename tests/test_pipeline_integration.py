@@ -172,3 +172,84 @@ class TestRunBatchFitCheck:
                 pattern_paths=[str(PATTERN_M), str(PATTERN_M)],
                 seam_manifest_paths=[str(MANIFEST_M)],
             )
+
+
+# ---------------------------------------------------------------------------
+# Additional garment-type paths used by TestMultiGarmentBatch
+# ---------------------------------------------------------------------------
+PATTERN_TANK = ROOT / "data" / "patterns" / "tank_top_size_M.json"
+MANIFEST_TANK = ROOT / "data" / "seam_manifests" / "tank_top_size_M_seam_manifest.json"
+
+PATTERN_TROUSERS = ROOT / "data" / "patterns" / "trousers_size_M.json"
+MANIFEST_TROUSERS = ROOT / "data" / "seam_manifests" / "trousers_size_M_seam_manifest.json"
+
+
+class TestMultiGarmentBatch:
+    """Integration tests that exercise the M-body against multiple garment types."""
+
+    def test_batch_tshirt_and_tank_top(self):
+        """run_batch_fit_check with tshirt + tank_top returns two valid verdicts."""
+        from pipeline import run_batch_fit_check
+
+        results = run_batch_fit_check(
+            body_mesh_path=str(BODY_M),
+            pattern_paths=[str(PATTERN_M), str(PATTERN_TANK)],
+            seam_manifest_paths=[str(MANIFEST_M), str(MANIFEST_TANK)],
+            fabric_id=FABRIC_ID,
+            backend="cpu",
+        )
+
+        assert len(results) == 2, "Expected exactly two results for two garments"
+        tshirt_result, tank_result = results
+
+        # Tshirt M on body M should fit
+        assert tshirt_result["fit"] is True, (
+            f"tshirt fit should be True; strain_map={tshirt_result.get('strain_map')}"
+        )
+        # Tank top fixture is undersized for M body — just check schema is present
+        assert "verdict_id" in tank_result
+        assert "strain_map" in tank_result
+
+    def test_trousers_on_male_m(self):
+        """run_fit_check with trousers on male M body — outcome agnostic, schema required."""
+        from pipeline import run_fit_check
+
+        verdict = run_fit_check(
+            body_mesh_path=str(BODY_M),
+            pattern_path=str(PATTERN_TROUSERS),
+            seam_manifest_path=str(MANIFEST_TROUSERS),
+            fabric_id=FABRIC_ID,
+            backend="cpu",
+        )
+
+        assert "verdict_id" in verdict, "verdict_id key missing from trousers result"
+        assert "strain_map" in verdict, "strain_map key missing from trousers result"
+
+        vid = verdict["verdict_id"]
+        assert vid.startswith("vrd_"), f"verdict_id has wrong prefix: {vid!r}"
+        assert len(vid) == len("vrd_") + 12, f"verdict_id wrong length: {vid!r}"
+
+    def test_all_garments_return_schema(self):
+        """tshirt, tank_top, and trousers each return the required top-level keys."""
+        from pipeline import run_fit_check
+
+        required_keys = {"fit", "verdict_id", "strain_map", "body_source"}
+
+        garments = [
+            (PATTERN_M, MANIFEST_M, "tshirt"),
+            (PATTERN_TANK, MANIFEST_TANK, "tank_top"),
+            (PATTERN_TROUSERS, MANIFEST_TROUSERS, "trousers"),
+        ]
+
+        for pattern_path, manifest_path, label in garments:
+            verdict = run_fit_check(
+                body_mesh_path=str(BODY_M),
+                pattern_path=str(pattern_path),
+                seam_manifest_path=str(manifest_path),
+                fabric_id=FABRIC_ID,
+                backend="cpu",
+            )
+            missing = required_keys - verdict.keys()
+            assert not missing, (
+                f"{label} result is missing keys: {missing}; got keys={set(verdict.keys())}"
+            )
