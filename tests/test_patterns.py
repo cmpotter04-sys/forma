@@ -386,3 +386,38 @@ class TestDressPattern:
         with open(DRESS_MANIFEST) as f:
             manifest = json.load(f)
         assert manifest["validation"]["total_seam_pairs"] == 6
+
+
+# ---------------------------------------------------------------------------
+# Trousers (size M) fixture tests
+# ---------------------------------------------------------------------------
+
+TROUSERS_PATTERN = Path("data/patterns/trousers_size_M.json")
+TROUSERS_MANIFEST = Path("data/seam_manifests/trousers_size_M_seam_manifest.json")
+
+
+class TestTrousersPattern:
+
+    def test_trousers_loads_without_error(self):
+        pattern = load_pattern(TROUSERS_PATTERN)
+        assert pattern is not None
+
+    def test_trousers_has_four_panels(self):
+        pattern = load_pattern(TROUSERS_PATTERN)
+        assert len(pattern["panels"]) == 4
+
+    def test_trousers_panel_names(self):
+        pattern = load_pattern(TROUSERS_PATTERN)
+        assert set(pattern["panels"].keys()) == {
+            "front_left_leg", "front_right_leg", "back_left_leg", "back_right_leg"
+        }
+
+    def test_trousers_garment_id(self):
+        pattern = load_pattern(TROUSERS_PATTERN)
+        assert pattern["garment_id"] == "trousers_gc_v1_size_M"
+
+    def test_trousers_seam_manifest_valid(self):
+        with open(TROUSERS_MANIFEST) as f:
+            manifest = json.load(f)
+        assert manifest["validation"]["all_seams_valid"] is True
+        assert manifest["validation"]["total_seam_pairs"] == 4
