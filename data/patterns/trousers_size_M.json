@@ -1,0 +1,97 @@
+{
+  "pattern": {
+    "panels": {
+      "front_left_leg": {
+        "translation": [24.0, 40.0, 15.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "vertices": [
+          [0.0, 0.0],
+          [24.0, 0.0],
+          [24.0, 76.0],
+          [0.0, 76.0]
+        ],
+        "edges": [
+          {"endpoints": [0, 1]},
+          {"endpoints": [1, 2], "curvature": {"type": "quadratic", "params": [[0.5, 0.06]]}},
+          {"endpoints": [2, 3]},
+          {"endpoints": [3, 0]}
+        ]
+      },
+      "front_right_leg": {
+        "translation": [-24.0, 40.0, 15.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "vertices": [
+          [0.0, 0.0],
+          [24.0, 0.0],
+          [24.0, 76.0],
+          [0.0, 76.0]
+        ],
+        "edges": [
+          {"endpoints": [0, 1]},
+          {"endpoints": [1, 2]},
+          {"endpoints": [2, 3]},
+          {"endpoints": [3, 0], "curvature": {"type": "quadratic", "params": [[0.5, -0.06]]}}
+        ]
+      },
+      "back_left_leg": {
+        "translation": [24.0, 40.0, -15.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "vertices": [
+          [0.0, 0.0],
+          [28.0, 0.0],
+          [28.0, 76.0],
+          [0.0, 76.0]
+        ],
+        "edges": [
+          {"endpoints": [0, 1]},
+          {"endpoints": [1, 2], "curvature": {"type": "quadratic", "params": [[0.5, 0.06]]}},
+          {"endpoints": [2, 3]},
+          {"endpoints": [3, 0]}
+        ]
+      },
+      "back_right_leg": {
+        "translation": [-24.0, 40.0, -15.0],
+        "rotation": [0.0, 0.0, 0.0],
+        "vertices": [
+          [0.0, 0.0],
+          [28.0, 0.0],
+          [28.0, 76.0],
+          [0.0, 76.0]
+        ],
+        "edges": [
+          {"endpoints": [0, 1]},
+          {"endpoints": [1, 2]},
+          {"endpoints": [2, 3]},
+          {"endpoints": [3, 0], "curvature": {"type": "quadratic", "params": [[0.5, -0.06]]}}
+        ]
+      }
+    },
+    "stitches": [
+      [{"panel": "front_left_leg", "edge": 1}, {"panel": "front_right_leg", "edge": 3}],
+      [{"panel": "front_left_leg", "edge": 3}, {"panel": "back_left_leg", "edge": 3}],
+      [{"panel": "front_right_leg", "edge": 1}, {"panel": "back_right_leg", "edge": 1}],
+      [{"panel": "back_left_leg",  "edge": 1}, {"panel": "back_right_leg", "edge": 3}]
+    ],
+    "panel_order": [
+      "front_left_leg",
+      "front_right_leg",
+      "back_left_leg",
+      "back_right_leg"
+    ]
+  },
+  "parameters": {},
+  "parameter_order": [],
+  "properties": {
+    "curvature_coords": "relative",
+    "normalize_panel_translation": false,
+    "normalized_edge_loops": true,
+    "units_in_meter": 100
+  },
+  "_forma_metadata": {
+    "garment_id": "trousers_gc_v1_size_M",
+    "size": "M",
+    "scale_factor": 1.0,
+    "source": "hand_crafted",
+    "fabric_id": "cotton_jersey_default"
+  }
+}
