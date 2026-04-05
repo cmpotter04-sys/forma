@@ -54,6 +54,7 @@ from geometer.garment_assembly import (
     compute_strain_ratios,
     REQUIRED_REGIONS,
 )
+from geometer.warp.contact_pressure import compute_contact_pressure
 
 # Lazy Warp import — only fails when actually called, not at import time.
 # This lets pipeline.py import both backends without requiring warp locally.
@@ -499,9 +500,26 @@ def run_simulation_warp(
         draped_positions, body_vertices, body_normals
     )
 
+    # ---- 10. Contact pressure per region ------------------------------------
+    # Builds a partial sim_result dict to pass context (soft_contact_ke).
+    # garment_faces and body_normals are passed explicitly so compute_contact_pressure
+    # can use accurate per-vertex areas and signed-distance projections.
+    _partial_result = {"soft_contact_ke": 1e4}
+    pressure_map = compute_contact_pressure(
+        sim_result=_partial_result,
+        body_vertices=body_vertices,
+        garment_vertices=draped_positions,
+        region_labels=garment_regions,
+        fabric_params=fabric_params,
+        dt=dt,
+        garment_faces=garment["faces"],
+        body_normals=body_normals,
+    )
+
     return {
         "clearance_map": clearance_map,
         "strain_ratio_map": strain_ratio_map,
+        "pressure_map": pressure_map,
         "simulation_ms": simulation_ms,
         "convergence_step": warp_result["convergence_step"],
         "final_kinetic_energy_j": warp_result["final_kinetic_energy_j"],
