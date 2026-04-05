@@ -1,0 +1,100 @@
+{
+  "body_profile_id": "mannequin_sizeM_180cm",
+  "mesh_type": "parametric_torso",
+  "smplx_betas": null,
+  "parametric_control_points": [
+    [
+      0.0,
+      0.22
+    ],
+    [
+      0.06,
+      0.34
+    ],
+    [
+      0.25,
+      0.38
+    ],
+    [
+      0.43,
+      0.4
+    ],
+    [
+      0.55,
+      0.52
+    ],
+    [
+      0.82,
+      0.9
+    ],
+    [
+      0.9,
+      0.95
+    ],
+    [
+      0.97,
+      0.91
+    ],
+    [
+      1.05,
+      0.798
+    ],
+    [
+      1.1,
+      0.84
+    ],
+    [
+      1.25,
+      0.96
+    ],
+    [
+      1.35,
+      0.92
+    ],
+    [
+      1.42,
+      0.82
+    ],
+    [
+      1.47,
+      0.42
+    ],
+    [
+      1.51,
+      0.37
+    ],
+    [
+      1.56,
+      0.56
+    ],
+    [
+      1.65,
+      0.58
+    ],
+    [
+      1.8,
+      0.2
+    ]
+  ],
+  "n_rings": 120,
+  "n_theta": 80,
+  "target_measurements": {
+    "height_cm": 180.0,
+    "chest_cm": 96.0,
+    "waist_cm": 80.0,
+    "hip_cm": 95.0,
+    "shoulder_width_cm": 44.0,
+    "inseam_cm": 82.0
+  },
+  "achieved_measurements": {
+    "height_cm": 180.0,
+    "chest_cm": 96.14,
+    "waist_cm": 80.0,
+    "hip_cm": 95.03,
+    "shoulder_width_cm": 44.0,
+    "inseam_cm": 82.0
+  },
+  "max_error_mm": 1.4,
+  "mesh_path": "/Users/calvinpotter/Desktop/Forma.Mar10Go/data/bodies/mannequin_sizeM_180cm.ply",
+  "note": "Phase 1 uses a parametric torso mesh, not SMPL-X. SMPL-X betas are not applicable. Control points define circular cross-sections along height."
+}

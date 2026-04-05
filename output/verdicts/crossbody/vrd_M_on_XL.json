@@ -1,0 +1,93 @@
+{
+  "verdict_id": "vrd_5339f6677ebc",
+  "fit": false,
+  "confidence": 1.0,
+  "body_source": "synthetic_mannequin",
+  "scan_method": "synthetic_mannequin",
+  "scan_accuracy_mm": 0,
+  "garment_id": "tshirt_gc_v1_size_M",
+  "body_profile_id": "makehuman_male_XL",
+  "strain_map": [
+    {
+      "region": "chest_front",
+      "delta_mm": -59.346,
+      "severity": "red",
+      "median_strain_ratio": 1.0156
+    },
+    {
+      "region": "chest_side",
+      "delta_mm": -57.746,
+      "severity": "red",
+      "median_strain_ratio": 1.2605
+    },
+    {
+      "region": "shoulder_left",
+      "delta_mm": -61.683,
+      "severity": "red",
+      "median_strain_ratio": 1.0185
+    },
+    {
+      "region": "shoulder_right",
+      "delta_mm": -59.961,
+      "severity": "red",
+      "median_strain_ratio": 1.0238
+    },
+    {
+      "region": "upper_back",
+      "delta_mm": -57.499,
+      "severity": "red",
+      "median_strain_ratio": 1.0304
+    },
+    {
+      "region": "waist",
+      "delta_mm": -70.257,
+      "severity": "red",
+      "median_strain_ratio": 1.0966
+    }
+  ],
+  "ease_map": [
+    {
+      "region": "chest_front",
+      "excess_mm": 0.0,
+      "verdict": "tight_fit"
+    },
+    {
+      "region": "chest_side",
+      "excess_mm": 0.0,
+      "verdict": "tight_fit"
+    },
+    {
+      "region": "shoulder_left",
+      "excess_mm": 0.0,
+      "verdict": "tight_fit"
+    },
+    {
+      "region": "shoulder_right",
+      "excess_mm": 0.0,
+      "verdict": "tight_fit"
+    },
+    {
+      "region": "upper_back",
+      "excess_mm": 0.0,
+      "verdict": "tight_fit"
+    },
+    {
+      "region": "waist",
+      "excess_mm": 0.0,
+      "verdict": "tight_fit"
+    }
+  ],
+  "simulation_ms": 774,
+  "convergence_step": 200,
+  "final_kinetic_energy_j": 0.00017463094393641612,
+  "tunnel_through_pct": 0.0,
+  "fabric_params_used": {
+    "fabric_id": "cotton_jersey_default",
+    "type": "cotton_jersey",
+    "density_kg_m2": 0.18,
+    "stretch_stiffness": 40.0,
+    "bend_stiffness": 0.005,
+    "shear_stiffness": 3.0,
+    "damping": 0.995
+  }
+}

@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forma — Build Plan</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a0f;
+    color: #e8e8f0;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .deck { width: 100vw; height: 100vh; position: relative; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 80px;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+
+  .slide.active {
+    display: flex;
+    opacity: 1;
+  }
+
+  /* Nav */
+  .nav {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 100;
+  }
+
+  .nav button {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #e8e8f0;
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+  }
+
+  .nav button:hover { background: rgba(255,255,255,0.16); }
+
+  .slide-counter {
+    font-size: 13px;
+    color: rgba(255,255,255,0.35);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  /* Progress bar */
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: #6366f1;
+    transition: width 0.35s ease;
+    z-index: 100;
+  }
+
+  /* Typography */
+  .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #6366f1;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  h3 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 22px;
+    color: rgba(255,255,255,0.5);
+    max-width: 640px;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  .body-text {
+    font-size: 17px;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+    max-width: 680px;
+    text-align: center;
+  }
+
+  /* Cards */
+  .cards {
+    display: grid;
+    gap: 16px;
+    width: 100%;
+    max-width: 1000px;
+    margin-top: 32px;
+  }
+
+  .cards.cols-2 { grid-template-columns: 1fr 1fr; }
+  .cards.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .cards.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .card .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .card h3 { font-size: 18px; margin-bottom: 6px; }
+  .card p { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-bottom: 10px;
+  }
+
+  .badge.done     { background: rgba(34,197,94,0.15);  color: #4ade80; }
+  .badge.active   { background: rgba(99,102,241,0.2);  color: #818cf8; }
+  .badge.next     { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .badge.future   { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.35); }
+  .badge.blocked  { background: rgba(239,68,68,0.15);  color: #f87171; }
+
+  /* Pipeline diagram */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pipe-node {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+    min-width: 100px;
+  }
+
+  .pipe-node.done { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.06); }
+  .pipe-node.active { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.08); }
+  .pipe-node.next { border-color: rgba(251,191,36,0.4); background: rgba(251,191,36,0.06); }
+  .pipe-node.future { border-color: rgba(255,255,255,0.06); }
+
+  .pipe-node .node-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
+  .pipe-node .node-name { font-size: 14px; font-weight: 600; }
+
+  .pipe-arrow {
+    font-size: 18px;
+    color: rgba(255,255,255,0.2);
+    padding: 0 6px;
+  }
+
+  /* Table */
+  .data-table {
+    width: 100%;
+    max-width: 900px;
+    border-collapse: collapse;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.75);
+    vertical-align: top;
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+
+  /* Big stat */
+  .stat-row {
+    display: flex;
+    gap: 40px;
+    margin-top: 32px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat .num {
+    font-size: 52px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .stat .stat-label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Accent colors */
+  .accent-purple { color: #818cf8; }
+  .accent-green  { color: #4ade80; }
+  .accent-yellow { color: #fbbf24; }
+  .accent-red    { color: #f87171; }
+  .accent-blue   { color: #60a5fa; }
+
+  /* Code block */
+  .code-block {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.7);
+    text-align: left;
+    max-width: 800px;
+    width: 100%;
+    margin-top: 24px;
+    white-space: pre;
+  }
+
+  .code-block .c-green { color: #4ade80; }
+  .code-block .c-blue  { color: #60a5fa; }
+  .code-block .c-yellow{ color: #fbbf24; }
+  .code-block .c-dim   { color: rgba(255,255,255,0.25); }
+  .code-block .c-purple{ color: #a78bfa; }
+
+  /* Divider */
+  .divider {
+    width: 48px;
+    height: 3px;
+    background: #6366f1;
+    border-radius: 2px;
+    margin: 20px auto;
+  }
+
+  /* Versus */
+  .versus {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 24px;
+    align-items: center;
+    max-width: 900px;
+    width: 100%;
+    margin-top: 32px;
+  }
+
+  .versus .vs-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.25);
+    text-align: center;
+  }
+
+  /* Timeline */
+  .timeline {
+    width: 100%;
+    max-width: 900px;
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tl-row {
+    display: grid;
+    grid-template-columns: 140px 24px 1fr;
+    gap: 16px;
+    align-items: flex-start;
+    padding-bottom: 28px;
+    position: relative;
+  }
+
+  .tl-row:last-child { padding-bottom: 0; }
+
+  .tl-phase {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.35);
+    text-align: right;
+    padding-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  .tl-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .tl-dot::after {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 5px;
+    width: 2px;
+    height: calc(100% + 16px);
+    background: rgba(255,255,255,0.08);
+  }
+
+  .tl-row:last-child .tl-dot::after { display: none; }
+
+  .tl-dot.done   { background: #4ade80; }
+  .tl-dot.active { background: #818cf8; }
+  .tl-dot.next   { background: #fbbf24; }
+  .tl-dot.future { background: rgba(255,255,255,0.2); }
+
+  .tl-content h4 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .tl-content p  { font-size: 13px; color: rgba(255,255,255,0.45); line-height: 1.6; }
+
+  /* Background glow */
+  .glow {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-1 { width: 600px; height: 600px; background: #6366f1; top: -200px; right: -100px; }
+  .glow-2 { width: 400px; height: 400px; background: #06b6d4; bottom: -100px; left: -100px; }
+
+  .slide > * { position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- ── SLIDE 1: Title ── -->
+  <div class="slide active" id="s1">
+    <div class="label">Physics-Based Garment Fit</div>
+    <h1 style="text-align:center; font-size:72px;">FORMA</h1>
+    <div class="divider"></div>
+    <p class="subtitle">The only VTO system that simulates real cloth physics on a 3D body twin — producing millimeter-level fit verdicts, not statistical guesses.</p>
+    <div class="stat-row" style="margin-top:48px;">
+      <div class="stat">
+        <div class="num accent-green">≤2mm</div>
+        <div class="stat-label">Clearance accuracy</div>
+      </div>
+      <div class="stat">
+        <div class="num accent-purple">~35%</div>
+        <div class="stat-label">Pipeline complete</div>
+      </div>
+      <div class="stat">
+        <div class="num accent-yellow">4–6mo</div>
+        <div class="stat-label">MVP timeline</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 2: The Problem ── -->
+  <div class="slide" id="s2">
+    <div class="label">The Problem</div>
+    <h2>Fit is the #1 reason people return clothes online.</h2>
+    <div class="divider"></div>
+    <div class="cards cols-3" style="margin-top:32px;">
+      <div class="card">
+        <div class="card-label accent-red">The Status Quo</div>
+        <h3>Statistical guessing</h3>
+        <p>Every VTO product correlates historical data or warps photos. None simulate actual cloth mechanics.</p>
+      </div>
+      <div class="card">
+        <div class="card-label accent-yellow">The Result</div>
+        <h3>30–40% return rates</h3>
+        <p>Users receive garments that don't fit. Brands absorb return costs. Trust in online fashion breaks down.</p>
+      </div>
+      <div class="card">
+        <div class="card-label accent-purple">The Gap</div>
+        <h3>No physics ground truth</h3>
+        <p>Statistical models need accurate fit labels to train on. Those labels don't exist anywhere today.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 3: What Forma Produces ── -->
+  <div class="slide" id="s3">
+    <div class="label">The Output</div>
+    <h2>Not "you might like size M."</h2>
+    <div class="divider"></div>
+    <p class="subtitle" style="margin-bottom:24px;">A deterministic, explainable, physically-grounded fit verdict.</p>
+    <div class="code-block"><span class="c-dim">{</span>
+  <span class="c-blue">"fit"</span>: <span class="c-green">true</span>,
+  <span class="c-blue">"confidence"</span>: <span class="c-yellow">1.0</span>,
+  <span class="c-blue">"strain_map"</span>: [
+    { <span class="c-blue">"region"</span>: <span class="c-green">"chest_front"</span>,  <span class="c-blue">"delta_mm"</span>: <span class="c-yellow">+12.4</span>, <span class="c-blue">"severity"</span>: <span class="c-green">"green"</span> },
+    { <span class="c-blue">"region"</span>: <span class="c-green">"shoulder_left"</span>, <span class="c-blue">"delta_mm"</span>: <span class="c-yellow">+24.1</span>, <span class="c-blue">"severity"</span>: <span class="c-green">"green"</span> },
+    { <span class="c-blue">"region"</span>: <span class="c-green">"waist"</span>,          <span class="c-blue">"delta_mm"</span>: <span class="c-yellow"> -8.2</span>, <span class="c-blue">"severity"</span>: <span class="c-green">"green"</span> }
+  ]
+<span class="c-dim">}</span></div>
+    <p class="body-text" style="margin-top:20px;">Negative = body larger than garment (too tight). Positive = garment larger (ease). Every verdict comes from real simulation — nothing hardcoded.</p>
+  </div>
+
+  <!-- ── SLIDE 4: The Full Product Vision ── -->
+  <div class="slide" id="s4">
+    <div class="label">The Full Vision</div>
+    <h2>How the product works end-to-end</h2>
+    <div class="divider"></div>
+    <div class="cards cols-2" style="max-width:900px; margin-top:24px;">
+      <div class="card">
+        <div class="badge active">Phase 1 — MVP</div>
+        <h3>Measurements → Fit Verdict</h3>
+        <p>User enters 6 measurements. Forma generates their body mesh, finds nearest reference bodies, interpolates fit from precomputed simulations. Returns: fits / doesn't fit + key measurements.</p>
+      </div>
+      <div class="card">
+        <div class="badge future">Phase 2 — Full Product</div>
+        <h3>Desired Fit → Garment Discovery</h3>
+        <p>User clicks/drags on their mannequin to define how they want a garment to fit. Pattern decomposition finds catalog garments that match that fit profile. 360° view on their mannequin.</p>
+      </div>
+      <div class="card">
+        <div class="badge future">Phase 3 — NDF</div>
+        <h3>Neural Distance Field Inference</h3>
+        <p>NDF trained on precomputed simulations enables sub-second fit prediction for any user body. Replaces interpolation with learned physics.</p>
+      </div>
+      <div class="card">
+        <div class="badge future">Phase 4 — Body Scan Moat</div>
+        <h3>Styku Partnership + Van Fleet</h3>
+        <p>Professional scanner integrations. Pop-ups at events. Mobile scanning vans in the Bay Area. Sub-5mm body accuracy unlocks "trust exactly what you see" fidelity.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 5: Competitive Landscape ── -->
+  <div class="slide" id="s5">
+    <div class="label">Market Position</div>
+    <h2>Nobody has built this combination</h2>
+    <div class="divider"></div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th>Physics</th>
+          <th>Pattern decomp</th>
+          <th>User fit profile search</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Zalando / Zeekit</strong></td>
+          <td><span class="accent-red">✗ GAN overlay</span></td>
+          <td><span class="accent-red">✗</span></td>
+          <td><span class="accent-red">✗</span></td>
+          <td><span class="accent-red">Visual only</span></td>
+        </tr>
+        <tr>
+          <td><strong>True Fit / Bold Metrics</strong></td>
+          <td><span class="accent-red">✗ Statistical</span></td>
+          <td><span class="accent-red">✗</span></td>
+          <td><span class="accent-red">✗</span></td>
+          <td><span class="accent-yellow">Size rec only</span></td>
+        </tr>
+        <tr>
+          <td><strong>ISP (ETH/MPI)</strong></td>
+          <td><span class="accent-green">✓ Implicit fields</span></td>
+          <td><span class="accent-green">✓ Academic</span></td>
+          <td><span class="accent-red">✗</span></td>
+          <td><span class="accent-yellow">Academic only</span></td>
+        </tr>
+        <tr>
+          <td><strong style="color:#818cf8;">FORMA</strong></td>
+          <td><span class="accent-green">✓ FEM + HOOD</span></td>
+          <td><span class="accent-green">✓</span></td>
+          <td><span class="accent-green">✓</span></td>
+          <td><span class="accent-green">Millimeter verdict</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="body-text" style="margin-top:24px;">The combination of physics ground truth + NDF inference + pattern-based fit matching + user-defined fit search exists nowhere in production.</p>
+  </div>
+
+  <!-- ── SLIDE 6: Full Technical Pipeline ── -->
+  <div class="slide" id="s6">
+    <div class="label">Architecture</div>
+    <h2>The complete pipeline</h2>
+    <div class="pipeline" style="flex-direction:column; align-items:flex-start; max-width:860px; gap:0; margin-top:24px;">
+
+      <div style="display:flex; align-items:center; gap:0; flex-wrap:wrap;">
+        <div class="pipe-node done"><div class="node-label">User input</div><div class="node-name">Measurements</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node next"><div class="node-label">Sculptor</div><div class="node-name">Anny Body Mesh</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node next"><div class="node-label">Library</div><div class="node-name">20 Ref Bodies</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node next"><div class="node-label">Lookup</div><div class="node-name">K-Nearest Match</div></div>
+      </div>
+
+      <div style="height:16px; border-left:2px solid rgba(255,255,255,0.08); margin-left:60px;"></div>
+
+      <div style="display:flex; align-items:center; gap:0; flex-wrap:wrap;">
+        <div class="pipe-node done"><div class="node-label">Pattern Maker</div><div class="node-name">DXF → JSON</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node done"><div class="node-label">Tailor</div><div class="node-name">Panel Assembly</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node active"><div class="node-label">Geometer</div><div class="node-name">HOOD Simulate</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node done"><div class="node-label">Clearance</div><div class="node-name">Δmm / Region</div></div>
+      </div>
+
+      <div style="height:16px; border-left:2px solid rgba(255,255,255,0.08); margin-left:60px;"></div>
+
+      <div style="display:flex; align-items:center; gap:0; flex-wrap:wrap;">
+        <div class="pipe-node next"><div class="node-label">Precompute DB</div><div class="node-name">20 × N stored</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node next"><div class="node-label">Interpolation</div><div class="node-name">Weighted Fit</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node done"><div class="node-label">Verdict</div><div class="node-name">fit_verdict.json</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node future"><div class="node-label">UI</div><div class="node-name">3D Viewer</div></div>
+      </div>
+
+    </div>
+    <div style="display:flex; gap:24px; margin-top:24px; font-size:12px;">
+      <span><span class="badge done" style="font-size:10px;">built</span></span>
+      <span><span class="badge active" style="font-size:10px;">in progress</span></span>
+      <span><span class="badge next" style="font-size:10px;">next</span></span>
+      <span><span class="badge future" style="font-size:10px;">future</span></span>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 7: What's Built ── -->
+  <div class="slide" id="s7">
+    <div class="label">Current State — ~35% Complete</div>
+    <h2>The simulation core is solved</h2>
+    <div class="divider"></div>
+    <div class="cards cols-2" style="max-width:900px; margin-top:24px;">
+      <div class="card">
+        <div class="badge done">Built & Validated</div>
+        <p style="font-size:14px; line-height:2; color:rgba(255,255,255,0.7);">
+          ✓ Pure-Python XPBD cloth solver<br>
+          ✓ Garment assembly (panel triangulation + seam warm-up)<br>
+          ✓ Body collision resolution<br>
+          ✓ Clearance measurement per region<br>
+          ✓ Region segmentation (chest, shoulder, waist…)<br>
+          ✓ Fabric parameter library<br>
+          ✓ fit_verdict.json schema + generation<br>
+          ✓ 284 passing tests
+        </p>
+      </div>
+      <div class="card">
+        <div class="badge next">Still Needed for MVP</div>
+        <p style="font-size:14px; line-height:2; color:rgba(255,255,255,0.7);">
+          → HOOD integration (replace Warp GPU backend)<br>
+          → Anny body model (measurements → mesh)<br>
+          → 20 reference body library<br>
+          → Precompute pipeline (Kaggle T4)<br>
+          → K-nearest interpolation engine<br>
+          → Basic 3D viewer<br>
+          → Shopping browser integration
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 8: Simulation Engine Decision ── -->
+  <div class="slide" id="s8">
+    <div class="label">Engine Decision</div>
+    <h2>CPU → HOOD on Kaggle</h2>
+    <div class="divider"></div>
+    <div class="cards cols-3" style="margin-top:24px; max-width:960px;">
+      <div class="card">
+        <div class="badge done">Phase 1 — Keep</div>
+        <h3>CPU XPBD</h3>
+        <p>Pure Python numpy/scipy. Runs locally on M3 Mac. 284 tests validate it. Used for all local development and unit testing. Never removed.</p>
+      </div>
+      <div class="card">
+        <div class="badge active">Phase 2 — Build Now</div>
+        <h3>HOOD / ContourCraft</h3>
+        <p>MIT licensed. GNN-based cloth simulation. Accepts pre-stitched OBJ meshes. Runs on Kaggle free T4 GPU (30hrs/week). Handles seam-stitched garments natively. Visually realistic drape.</p>
+      </div>
+      <div class="card">
+        <div class="badge future">Validation Gate</div>
+        <h3>XRTailor FEM</h3>
+        <p>Apache 2.0. 15.1 Colab units reserved. Used as accuracy benchmark: run HOOD and XRTailor on same input, measure delta. If ≤2mm, HOOD is production-ready.</p>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top:24px; font-size:12px;"><span class="c-dim"># pipeline.py — adding HOOD backend</span>
+<span class="c-blue">run_fit_check</span>(..., <span class="c-green">backend=<span class="c-yellow">'cpu'</span></span>)    <span class="c-dim"># local dev — unchanged</span>
+<span class="c-blue">run_fit_check</span>(..., <span class="c-green">backend=<span class="c-yellow">'hood'</span></span>)   <span class="c-dim"># new — routes to hood_simulate.py</span></div>
+  </div>
+
+  <!-- ── SLIDE 9: Body Reconstruction ── -->
+  <div class="slide" id="s9">
+    <div class="label">Body Layer</div>
+    <h2>Measurements → Body Mesh</h2>
+    <div class="divider"></div>
+    <p class="body-text" style="margin-bottom:24px;">No phone scanning required for MVP. User enters 6 measurements. Anny (MIT, NAVER Labs 2024) generates a parametric 3D body mesh.</p>
+    <div class="pipeline">
+      <div class="pipe-node next" style="min-width:130px;">
+        <div class="node-label">User inputs</div>
+        <div class="node-name" style="font-size:12px;">Height · Chest<br>Waist · Hip<br>Shoulder · Arm</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node next" style="min-width:130px;">
+        <div class="node-label">Anny model</div>
+        <div class="node-name">Parametric<br>Body Mesh</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node next" style="min-width:130px;">
+        <div class="node-label">KNN lookup</div>
+        <div class="node-name">K Nearest<br>Ref Bodies</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node next" style="min-width:130px;">
+        <div class="node-label">Interpolation</div>
+        <div class="node-name">Predicted<br>Fit Result</div>
+      </div>
+    </div>
+    <div class="cards cols-2" style="max-width:800px; margin-top:28px;">
+      <div class="card">
+        <div class="badge next">MVP (now)</div>
+        <h3>Measurements only</h3>
+        <p>~12mm accuracy. No special setup, works for all users on any device. Ships immediately.</p>
+      </div>
+      <div class="card">
+        <div class="badge future">Phase 2 upgrade</div>
+        <h3>+ Styku / iPhone LIDAR</h3>
+        <p>~5mm accuracy. Styku partnership unlocks gym scan network. LIDAR as optional refinement layer.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 10: Precompute Strategy ── -->
+  <div class="slide" id="s10">
+    <div class="label">Precompute Strategy</div>
+    <h2>20 reference bodies × catalog</h2>
+    <div class="divider"></div>
+    <p class="body-text" style="margin-bottom:24px;">Simulate once offline. Serve instantly online. Interpolate fit for any user body from nearest reference results.</p>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th>What runs</th>
+          <th>Where</th>
+          <th>Cost</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>MVP precompute</strong></td>
+          <td>20 bodies × 1 garment (3 sizes)</td>
+          <td>Kaggle free T4</td>
+          <td><span class="accent-green">$0</span></td>
+          <td>~2–4 hours</td>
+        </tr>
+        <tr>
+          <td><strong>Catalog scale</strong></td>
+          <td>20 bodies × 100 garments</td>
+          <td>Kaggle free T4</td>
+          <td><span class="accent-green">$0</span></td>
+          <td>~1 week batch</td>
+        </tr>
+        <tr>
+          <td><strong>Production scale</strong></td>
+          <td>100 bodies × N catalog</td>
+          <td>Cloud GPU (spot)</td>
+          <td><span class="accent-yellow">Low — batch job</span></td>
+          <td>Offline, not blocking</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="body-text" style="margin-top:20px;">The 20 reference body grid must span the realistic distribution — not randomly sampled. Grid across chest circumference and shoulder width, with height variation.</p>
+  </div>
+
+  <!-- ── SLIDE 11: The Styku Opportunity ── -->
+  <div class="slide" id="s11">
+    <div class="label">The Moat</div>
+    <h2>A body scan database competitors can't replicate</h2>
+    <div class="divider"></div>
+    <div class="cards cols-2" style="max-width:900px; margin-top:24px;">
+      <div class="card">
+        <div class="badge future">Styku Partnership</div>
+        <h3>Unlock the install base</h3>
+        <p>Styku has thousands of scanners in LA Fitness and wellness centers. A data-sharing agreement turns every gym member into a potential Forma user — "scan at your gym, shop with confidence."</p>
+        <p style="margin-top:10px;">Key question to verify first: does the Styku API expose raw 3D mesh data, or just body measurements?</p>
+      </div>
+      <div class="card">
+        <div class="badge future">Van Fleet Strategy</div>
+        <h3>Free scans as acquisition</h3>
+        <p>Pop-ups at Bay Area conventions and events. If demand validates, scheduled van routes. Professional scanner (Styku / Fit3D) delivers sub-5mm accuracy.</p>
+        <p style="margin-top:10px;">Sequence: validate product first → pop-up pilot → van purchase on proven unit economics.</p>
+      </div>
+    </div>
+    <div class="card" style="max-width:900px; margin-top:16px; border-color:rgba(99,102,241,0.3);">
+      <div class="badge active">Why this is the right moat</div>
+      <p style="font-size:14px;">A database of 10,000 accurate Bay Area body scans is a physical asset. Every scanned user is locked in — their scan lives in Forma's system. Google built Maps through cars. Forma builds a body mesh database through vans. Pure software competitors can't replicate it.</p>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 12: MVP Definition ── -->
+  <div class="slide" id="s12">
+    <div class="label">MVP — 4 to 6 Months</div>
+    <h2>Smallest thing that proves the value</h2>
+    <div class="divider"></div>
+    <div class="cards cols-2" style="max-width:900px; margin-top:24px;">
+      <div class="card" style="border-color:rgba(34,197,94,0.3);">
+        <div class="badge done">In scope</div>
+        <p style="font-size:14px; line-height:2.1; color:rgba(255,255,255,0.75);">
+          ✓ T-shirts only (one garment category)<br>
+          ✓ Measurements-based body input<br>
+          ✓ 20 reference bodies<br>
+          ✓ Direct K-nearest interpolation (no NDF yet)<br>
+          ✓ Fit verdict: fits / doesn't fit + key measurements<br>
+          ✓ Basic 3D viewer<br>
+          ✓ Shopping browser integration
+        </p>
+      </div>
+      <div class="card" style="border-color:rgba(239,68,68,0.2);">
+        <div class="badge future">Out of scope for MVP</div>
+        <p style="font-size:14px; line-height:2.1; color:rgba(255,255,255,0.45);">
+          ✗ NDF training<br>
+          ✗ Drag-to-fit UI<br>
+          ✗ Pattern similarity search<br>
+          ✗ Phone / Styku scanning<br>
+          ✗ Multiple garment categories<br>
+          ✗ Supabase persistence<br>
+          ✗ 100 reference bodies
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 13: Build Timeline ── -->
+  <div class="slide" id="s13">
+    <div class="label">Build Sequence</div>
+    <h2>Critical path to MVP</h2>
+    <div class="divider"></div>
+    <div class="timeline">
+      <div class="tl-row">
+        <div class="tl-phase">Now</div>
+        <div class="tl-dot active"></div>
+        <div class="tl-content">
+          <h4 class="accent-purple">HOOD Integration</h4>
+          <p>Clone ContourCraft → build hood_simulate.py → add backend="hood" to pipeline.py → validate against CPU solver on Kaggle T4</p>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-phase">Weeks 1–3</div>
+        <div class="tl-dot next"></div>
+        <div class="tl-content">
+          <h4 class="accent-yellow">Anny Body Generation</h4>
+          <p>Integrate Anny model → anny_body.py accepts 6 measurements → outputs simulation-ready PLY → generate 20 reference bodies on measurement grid</p>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-phase">Weeks 3–6</div>
+        <div class="tl-dot next"></div>
+        <div class="tl-content">
+          <h4 class="accent-yellow">Precompute Pipeline</h4>
+          <p>Kaggle batch runner → simulate all 20 reference bodies × 3 t-shirt sizes → store results → validate ≤2mm accuracy</p>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-phase">Weeks 5–8</div>
+        <div class="tl-dot future"></div>
+        <div class="tl-content">
+          <h4>Interpolation Engine</h4>
+          <p>K-nearest neighbor in measurement space → weighted interpolation of stored clearance maps → fit verdict for any user body</p>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-phase">Weeks 8–16</div>
+        <div class="tl-dot future"></div>
+        <div class="tl-content">
+          <h4>3D Viewer + Shopping Browser</h4>
+          <p>Garment on mannequin viewer → fit verdict display → browser extension or embeddable widget for retail sites</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 14: The One Rule ── -->
+  <div class="slide" id="s14">
+    <div class="label">Build Discipline</div>
+    <h2>The one rule, always.</h2>
+    <div class="divider"></div>
+    <div class="card" style="max-width:700px; margin-top:24px; padding:40px; border-color:rgba(99,102,241,0.4); text-align:center;">
+      <p style="font-size:24px; font-weight:600; line-height:1.6; color:rgba(255,255,255,0.9);">Map the full pipeline requirements before touching any implementation.</p>
+      <p style="font-size:15px; color:rgba(255,255,255,0.4); margin-top:20px; line-height:1.7;">Before writing a single line of code, write down every input and output the component needs to support. Then read the API of whatever you're about to build and verify it can actually do those things.<br><br>Five minutes of verification before building saves months of rework.</p>
+    </div>
+  </div>
+
+  <!-- ── SLIDE 15: Next Step ── -->
+  <div class="slide" id="s15">
+    <div class="label">Immediate Next Step</div>
+    <h2>HOOD integration — executor agent</h2>
+    <div class="divider"></div>
+    <div class="code-block"><span class="c-dim"># What the executor builds</span>
+
+<span class="c-green">src/geometer/hood/</span>
+  <span class="c-blue">__init__.py</span>
+  <span class="c-blue">hood_simulate.py</span>     <span class="c-dim"># mirrors warp_simulate.py, calls HOOD inference</span>
+
+<span class="c-dim"># Contract:</span>
+<span class="c-dim"># Input:  assemble_garment() output (OBJ mesh + body mesh)</span>
+<span class="c-dim"># Output: sim_result dict — same keys as CPU backend</span>
+<span class="c-dim">#         { clearance_map, simulation_ms, convergence_step,</span>
+<span class="c-dim">#           final_kinetic_energy_j, tunnel_through_pct }</span>
+
+<span class="c-dim"># Validation:</span>
+<span class="c-dim"># Run CPU and HOOD on same t-shirt + reference body</span>
+<span class="c-dim"># Clearance delta must be ≤ 2mm per region</span>
+<span class="c-dim"># Run on Kaggle free T4 — zero cost</span></div>
+    <p class="body-text" style="margin-top:20px;">All 284 existing tests must still pass. The CPU backend is never removed — it's the local development and regression baseline forever.</p>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- Navigation -->
+<div class="nav">
+  <button onclick="prev()">← Prev</button>
+  <span class="slide-counter" id="counter">1 / 15</span>
+  <button onclick="next()">Next →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  function show(n) {
+    slides[current].classList.remove('active');
+    current = (n + total) % total;
+    slides[current].classList.add('active');
+    document.getElementById('counter').textContent = `${current + 1} / ${total}`;
+    document.getElementById('progress').style.width = `${((current + 1) / total) * 100}%`;
+  }
+
+  function next() { show(current + 1); }
+  function prev() { show(current - 1); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next();
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   prev();
+  });
+
+  // Init progress
+  document.getElementById('progress').style.width = `${(1 / total) * 100}%`;
+</script>
+</body>
+</html>

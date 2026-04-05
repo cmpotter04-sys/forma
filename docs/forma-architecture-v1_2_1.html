@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FORMA | System Architecture v1.2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --black: #080808;
+    --white: #F2F0EB;
+    --red: #E8320A;
+    --dim: #1A1A1A;
+    --mid: #2E2E2E;
+    --muted: #666;
+    --accent: #E8320A;
+    --green: #4CAF7D;
+    --yellow: #F5A623;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  .header {
+    padding: 80px 60px 60px;
+    border-bottom: 1px solid var(--mid);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::after {
+    content: 'FORMA';
+    position: absolute;
+    right: -20px;
+    top: -40px;
+    font-family: 'Syne', sans-serif;
+    font-size: 280px;
+    font-weight: 800;
+    color: transparent;
+    -webkit-text-stroke: 1px #1e1e1e;
+    pointer-events: none;
+    letter-spacing: -10px;
+  }
+
+  .tag { font-size: 10px; letter-spacing: 3px; color: var(--red); text-transform: uppercase; margin-bottom: 20px; }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+  }
+
+  h1 span { color: var(--red); }
+
+  .header-sub { color: var(--muted); max-width: 560px; font-size: 12px; line-height: 1.8; }
+
+  .version-badge {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 4px 12px;
+    border: 1px solid var(--mid);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--green);
+    text-transform: uppercase;
+  }
+
+  .mission-bar {
+    background: var(--red);
+    padding: 14px 60px;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    gap: 60px;
+    overflow: hidden;
+  }
+
+  section { padding: 80px 60px; border-bottom: 1px solid var(--mid); }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--mid); }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 48px;
+  }
+
+  .changelog {
+    background: var(--dim);
+    border: 1px solid var(--mid);
+    border-left: 3px solid var(--green);
+    padding: 24px 28px;
+    margin-bottom: 48px;
+  }
+
+  .changelog-title { font-size: 9px; letter-spacing: 3px; color: var(--green); text-transform: uppercase; margin-bottom: 14px; }
+
+  .changelog-item {
+    font-size: 11px;
+    color: #aaa;
+    padding: 5px 0;
+    border-bottom: 1px solid #1e1e1e;
+    display: flex;
+    gap: 12px;
+  }
+
+  .changelog-item:last-child { border-bottom: none; }
+
+  .changelog-tag {
+    font-size: 9px;
+    padding: 2px 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  .changelog-tag.added { background: rgba(76,175,125,0.15); color: var(--green); }
+  .changelog-tag.changed { background: rgba(232,50,10,0.12); color: var(--red); }
+  .changelog-tag.resolved { background: rgba(245,166,35,0.12); color: var(--yellow); }
+
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 20px;
+    margin-bottom: 60px;
+  }
+
+  .pipeline::-webkit-scrollbar { height: 2px; }
+  .pipeline::-webkit-scrollbar-track { background: var(--dim); }
+  .pipeline::-webkit-scrollbar-thumb { background: var(--red); }
+
+  .pipe-step {
+    flex: 1;
+    min-width: 160px;
+    border: 1px solid var(--mid);
+    border-right: none;
+    padding: 28px 20px;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: default;
+  }
+
+  .pipe-step:last-child { border-right: 1px solid var(--mid); }
+  .pipe-step:hover { background: var(--dim); border-color: var(--red); z-index: 2; }
+  .pipe-step:hover .pipe-arrow { color: var(--red); }
+  .pipe-step.deferred { border-style: dashed; opacity: 0.6; }
+  .pipe-step.deferred:hover { opacity: 1; }
+
+  .pipe-num { font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 12px; }
+  .pipe-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .pipe-io { font-size: 10px; color: var(--muted); line-height: 1.6; }
+  .pipe-io span { color: var(--red); display: block; margin-bottom: 2px; }
+  .pipe-arrow { position: absolute; right: -12px; top: 50%; transform: translateY(-50%); color: var(--mid); font-size: 18px; z-index: 3; transition: color 0.3s; }
+  .deferred-label { font-size: 9px; color: var(--yellow); letter-spacing: 1px; text-transform: uppercase; margin-top: 10px; }
+
+  .status-pill { display: inline-block; font-size: 9px; letter-spacing: 1px; padding: 2px 8px; text-transform: uppercase; border-radius: 2px; margin-top: 8px; }
+  .pill-green { background: rgba(76,175,125,0.15); color: var(--green); }
+  .pill-yellow { background: rgba(245,166,35,0.12); color: var(--yellow); }
+  .pill-red { background: rgba(232,50,10,0.12); color: var(--red); }
+
+  .mannequin-callout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--mid);
+    border: 1px solid var(--mid);
+    margin-bottom: 48px;
+  }
+
+  .callout-box { background: var(--black); padding: 32px; transition: background 0.3s; }
+  .callout-box:hover { background: var(--dim); }
+  .callout-label { font-size: 9px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
+  .callout-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px; }
+  .callout-body { font-size: 11px; color: #888; line-height: 1.9; }
+  .callout-spec { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .callout-spec-row { display: flex; gap: 12px; font-size: 10px; }
+  .callout-spec-key { color: var(--muted); min-width: 80px; }
+  .callout-spec-val { color: var(--white); }
+  .callout-spec-val.green { color: var(--green); }
+  .callout-spec-val.yellow { color: var(--yellow); }
+
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1px;
+    background: var(--mid);
+    border: 1px solid var(--mid);
+  }
+
+  .agent-card { background: var(--black); padding: 36px 32px; transition: background 0.3s ease; position: relative; overflow: hidden; }
+  .agent-card:hover { background: var(--dim); }
+  .agent-card::before {
+    content: attr(data-num);
+    position: absolute; right: 20px; top: 20px;
+    font-family: 'Syne', sans-serif; font-size: 64px; font-weight: 800;
+    color: transparent; -webkit-text-stroke: 1px #1e1e1e; line-height: 1;
+    transition: -webkit-text-stroke-color 0.3s;
+  }
+  .agent-card:hover::before { -webkit-text-stroke-color: #2a2a2a; }
+  .agent-card.deferred-card { opacity: 0.65; border: 1px dashed var(--mid); background: #0c0c0c; }
+  .agent-card.deferred-card:hover { opacity: 1; background: var(--dim); }
+
+  .agent-role { font-size: 9px; letter-spacing: 3px; color: var(--red); text-transform: uppercase; margin-bottom: 10px; }
+  .agent-name { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px; }
+  .agent-desc { font-size: 11px; color: #888; line-height: 1.8; margin-bottom: 24px; }
+  .agent-specs { display: flex; flex-direction: column; gap: 6px; }
+  .spec-row { display: flex; gap: 12px; font-size: 10px; align-items: baseline; }
+  .spec-key { color: var(--muted); min-width: 80px; letter-spacing: 1px; }
+  .spec-val { color: var(--white); flex: 1; }
+  .spec-val.red { color: var(--red); }
+  .spec-val.green { color: var(--green); }
+  .spec-val.yellow { color: var(--yellow); }
+
+  .flow-diagram { display: grid; grid-template-columns: 1fr 40px 1fr 40px 1fr; gap: 0; align-items: center; margin-bottom: 48px; }
+  .flow-box { border: 1px solid var(--mid); padding: 24px; transition: border-color 0.3s; }
+  .flow-box:hover { border-color: var(--red); }
+  .flow-box-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+  .flow-arrow-col { display: flex; justify-content: center; align-items: center; color: var(--red); font-size: 20px; }
+  .flow-item { font-size: 10px; color: var(--muted); padding: 4px 0; border-bottom: 1px solid #111; display: flex; justify-content: space-between; gap: 8px; }
+  .flow-item:last-child { border-bottom: none; }
+  .flow-item-key { color: #666; }
+  .flow-item-val { color: #aaa; font-size: 9px; }
+
+  .risk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; background: var(--mid); border: 1px solid var(--mid); margin-bottom: 48px; }
+  .risk-card { background: var(--black); padding: 28px; transition: background 0.3s; }
+  .risk-card:hover { background: var(--dim); }
+  .risk-status { font-size: 20px; margin-bottom: 10px; }
+  .risk-name { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .risk-desc { font-size: 10px; color: #888; line-height: 1.8; }
+
+  .cost-table { width: 100%; border-collapse: collapse; }
+  .cost-table th { font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--mid); }
+  .cost-table td { padding: 14px 16px; border-bottom: 1px solid #111; font-size: 11px; vertical-align: top; transition: background 0.2s; }
+  .cost-table tr:hover td { background: var(--dim); }
+  .cost-table td:first-child { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 12px; }
+  .free { color: var(--green); }
+  .paid { color: var(--yellow); }
+
+  .verdict-mock { border: 1px solid var(--mid); padding: 40px; max-width: 600px; position: relative; }
+  .verdict-mock::before { content: 'SAMPLE OUTPUT'; position: absolute; top: -1px; left: 32px; background: var(--black); padding: 0 8px; font-size: 9px; letter-spacing: 2px; color: var(--red); }
+  .verdict-title { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 20px; }
+  .verdict-result { font-family: 'Syne', sans-serif; font-size: 48px; font-weight: 800; letter-spacing: -2px; margin-bottom: 32px; display: flex; align-items: center; gap: 16px; }
+  .verdict-dot { width: 16px; height: 16px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .verdict-dot.fail { background: var(--red); }
+  .strain-bars { display: flex; flex-direction: column; gap: 10px; }
+  .strain-row { display: flex; align-items: center; gap: 12px; font-size: 10px; }
+  .strain-label { min-width: 100px; color: var(--muted); }
+  .strain-bar-bg { flex: 1; height: 4px; background: #1a1a1a; border-radius: 2px; overflow: hidden; }
+  .strain-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .strain-bar-fill.green { background: var(--green); }
+  .strain-bar-fill.yellow { background: var(--yellow); }
+  .strain-bar-fill.red { background: var(--red); }
+  .strain-val { min-width: 80px; text-align: right; }
+  .strain-val.green { color: var(--green); }
+  .strain-val.yellow { color: var(--yellow); }
+  .strain-val.red { color: var(--red); }
+
+  .code-block { background: var(--dim); border: 1px solid var(--mid); padding: 32px; font-size: 11px; line-height: 1.9; overflow-x: auto; margin-top: 32px; }
+  .code-block .c { color: #555; }
+  .code-block .n { color: #9CDCFE; }
+  .code-block .s { color: var(--green); }
+  .code-block .k { color: #569CD6; }
+
+  .roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--mid); border: 1px solid var(--mid); }
+  .phase { background: var(--black); padding: 36px 32px; transition: background 0.3s; }
+  .phase:hover { background: var(--dim); }
+  .phase-label { font-size: 9px; letter-spacing: 3px; color: var(--red); text-transform: uppercase; margin-bottom: 12px; }
+  .phase-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 24px; letter-spacing: -0.5px; }
+  .phase-item { font-size: 11px; color: #888; padding: 8px 0; border-bottom: 1px solid #111; line-height: 1.6; display: flex; gap: 10px; align-items: flex-start; }
+  .phase-item::before { content: '—'; color: var(--red); flex-shrink: 0; margin-top: 1px; }
+  .phase-item:last-child { border-bottom: none; }
+  .phase-item.highlight { color: var(--white); }
+  .phase-item.highlight::before { content: '★'; font-size: 10px; }
+
+  /* AI ORCHESTRATION */
+  .orch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--mid); border: 1px solid var(--mid); margin-bottom: 48px; }
+  .orch-card { background: var(--black); padding: 32px; transition: background 0.3s; }
+  .orch-card:hover { background: var(--dim); }
+  .orch-layer { font-size: 9px; letter-spacing: 3px; color: var(--red); text-transform: uppercase; margin-bottom: 10px; }
+  .orch-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.5px; }
+  .orch-desc { font-size: 11px; color: #888; line-height: 1.9; margin-bottom: 20px; }
+  .orch-specs { display: flex; flex-direction: column; gap: 6px; }
+  .orch-row { display: flex; gap: 12px; font-size: 10px; }
+  .orch-key { color: var(--muted); min-width: 80px; }
+  .orch-val { color: var(--white); }
+  .orch-val.green { color: var(--green); }
+  .orch-val.yellow { color: var(--yellow); }
+
+  .rhythm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--mid); border: 1px solid var(--mid); margin-bottom: 48px; }
+  .rhythm-card { background: var(--black); padding: 28px; transition: background 0.3s; }
+  .rhythm-card:hover { background: var(--dim); }
+  .rhythm-time { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 8px; }
+  .rhythm-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+  .rhythm-desc { font-size: 10px; color: #888; line-height: 1.8; }
+  .rhythm-duration { margin-top: 12px; font-size: 10px; color: var(--green); }
+
+  .no-delegate { background: var(--dim); border: 1px solid var(--mid); border-left: 3px solid var(--red); padding: 24px 28px; margin-bottom: 48px; }
+  .no-delegate-title { font-size: 9px; letter-spacing: 3px; color: var(--red); text-transform: uppercase; margin-bottom: 14px; }
+  .no-delegate-item { font-size: 11px; color: #aaa; padding: 6px 0; border-bottom: 1px solid #1e1e1e; display: flex; gap: 12px; align-items: flex-start; }
+  .no-delegate-item:last-child { border-bottom: none; }
+  .no-delegate-num { color: var(--red); font-family: 'Syne', sans-serif; font-weight: 700; flex-shrink: 0; }
+
+  /* TIMELINE */
+  .timeline-table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+  .timeline-table th { font-size: 9px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--mid); }
+  .timeline-table td { padding: 14px 16px; border-bottom: 1px solid #111; font-size: 11px; transition: background 0.2s; }
+  .timeline-table tr:hover td { background: var(--dim); }
+  .timeline-table td:first-child { font-family: 'Syne', sans-serif; font-weight: 600; }
+  .t-planned { color: var(--muted); }
+  .t-realistic { color: var(--yellow); }
+  .t-ai { color: var(--green); }
+
+  .reveal { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  footer { padding: 60px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--muted); letter-spacing: 2px; flex-wrap: wrap; gap: 20px; }
+  .footer-logo { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: var(--white); letter-spacing: -1px; }
+
+  @media (max-width: 768px) {
+    .header, section, footer { padding: 40px 24px; }
+    .mission-bar { padding: 14px 24px; gap: 30px; }
+    .roadmap, .rhythm-grid { grid-template-columns: 1fr; }
+    .mannequin-callout, .orch-grid { grid-template-columns: 1fr; }
+    .flow-diagram { grid-template-columns: 1fr; }
+    .flow-arrow-col { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="tag">// Architecture Document</div>
+  <h1>THE GLOBAL<br><span>FIT LEDGER</span></h1>
+  <div class="header-sub">Physics-based garment fit verification. Not a recommendation engine — a mathematical verdict. Every garment, every body, resolved to millimeter truth.</div>
+  <div class="version-badge">Architecture v1.2.1 — Updated March 2026</div>
+</div>
+
+<div class="mission-bar">
+  <span>MATHEMATICAL PHYSICAL TRUTH</span>
+  <span>PHYSICS · NOT STATISTICS</span>
+  <span>ZERO RETURNS</span>
+  <span>THE FIT LEDGER</span>
+</div>
+
+<!-- CHANGELOG -->
+<section>
+  <div class="section-label">00 // What's New</div>
+  <h2>Architecture Changelog</h2>
+  <div class="changelog">
+    <div class="changelog-title">v1.2.1 — March 2026</div>
+    <div class="changelog-item"><span class="changelog-tag added">Added</span>Geometer Implementation Spec — covers measurement-to-beta conversion (BetaSolver), body region segmentation, garment assembly, signed clearance computation. Closes the geometry pipeline gap.</div>
+    <div class="changelog-item"><span class="changelog-tag added">Added</span>Seam Manifest Schema — full schema definition for seam_manifest.json with validation rules, edge object format, and arc length tolerance checks.</div>
+    <div class="changelog-item"><span class="changelog-tag added">Added</span>Fabric Library — real XPBD parameters (density, stretch/bend/shear stiffness, damping) replacing the underspecified "stretch: 0.7". Five fabric types defined, cotton_jersey_default used in Phase 1.</div>
+    <div class="changelog-item"><span class="changelog-tag added">Added</span>AC-0 dependency spike — 30-minute pygarment and GarmentCode verification before any production code. Prevents Day 1 blocking issues.</div>
+    <div class="changelog-item"><span class="changelog-tag changed">Changed</span>Week 2 reprioritised — physics hardening (extended sizes, second garment type, fabric sensitivity) replaces Supabase integration. Supabase moved to Week 3.</div>
+    <div class="changelog-item"><span class="changelog-tag changed">Changed</span>Geometer stack — pytorch3d replaced with trimesh + scipy for Phase 1. Lighter, easier to install, sufficient for KDTree clearance computation. pytorch3d deferred to Phase 2 mesh fusion.</div>
+    <div class="changelog-item"><span class="changelog-tag changed">Changed</span>Convergence criterion — energy-based (kinetic energy &lt; 1e-6 J) replaces vertex-movement-only check. Catches cloth explosion automatically via energy spike detection.</div>
+    <div class="changelog-item"><span class="changelog-tag changed">Changed</span>verdict_id — expanded from 6 hex chars (~16M IDs) to 12 hex chars (~281T IDs).</div>
+    <div class="changelog-item"><span class="changelog-tag changed">Changed</span>CPU compute estimate — corrected from "~100ms on M3" to "2–10s on CPU" for XPBD with body + self-collision. ~100–300ms on A100 GPU.</div>
+    <div class="changelog-item"><span class="changelog-tag resolved">Resolved</span>Terminology — "strain_map" field name kept for schema stability, but documented as signed clearance (garment-to-body surface distance), not mechanical fabric strain.</div>
+  </div>
+  <div class="changelog" style="margin-top:16px; border-left-color:var(--muted);">
+    <div class="changelog-title">v1.2 — March 2026</div>
+    <div class="changelog-item"><span class="changelog-tag added">Added</span>Synthetic mannequin strategy — Sculptor deferred to Phase 2. MVP uses a single SMPL-X generated mesh with scan_accuracy_mm: 0 and confidence: 1.0.</div>
+    <div class="changelog-item"><span class="changelog-tag added">Added</span>body_source field to Archivist schema — enum["synthetic_mannequin", "standard_photo", "precision_suit"] — future-proofs schema for real body scanning in Phase 2.</div>
+    <div class="changelog-item"><span class="changelog-tag changed">Changed</span>Pattern Maker — replaced custom Master Parametric Blocks with pygarment (GarmentCode, ETH Zurich). 115k parametric patterns via pip install. Saves 2–3 weeks in Phase 1.</div>
+    <div class="changelog-item"><span class="changelog-tag changed">Changed</span>Phase 1 Week 1 reprioritised — first task is XPBD smoke test on synthetic mannequin, not pattern block construction.</div>
+    <div class="changelog-item"><span class="changelog-tag resolved">Resolved</span>NvidiaWarp-GarmentCode license — NVIDIA relicensed Warp to Apache 2.0 (v1.6.2, March 2025). ETH Zurich fork README states intent to follow. Action: email Maria Korosteleva + port to Apache Warp.</div>
+    <div class="changelog-item"><span class="changelog-tag resolved">Resolved</span>Confidence score — fixed scalar (0.88) replaced with empirical f(scan_accuracy_mm, strain_magnitude, body_region). Synthetic mannequin: 1.0 by definition.</div>
+    <div class="changelog-item"><span class="changelog-tag added">Added</span>ChatGarment (CVPR 2025) flagged as future Pattern Maker upgrade — VLM generating GarmentCode JSON from product images or text.</div>
+    <div class="changelog-item"><span class="changelog-tag added">Added</span>AI Orchestration model — Claude + Claude Code as two-layer build system. Founder as director, not developer. ~4 month timeline to first commercial demo.</div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section>
+  <div class="section-label">01 // System Overview</div>
+  <h2>The Pipeline</h2>
+  <div class="pipeline reveal">
+    <div class="pipe-step">
+      <div class="pipe-num">01 //</div>
+      <div class="pipe-name">Body Source</div>
+      <div class="pipe-io"><span>MVP INPUT</span>Synthetic SMPL-X mannequin. Single mesh. Generated once. Confidence 1.0.</div>
+      <div class="deferred-label">↓ Phase 2: real photos</div>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">02 //</div>
+      <div class="pipe-name">Pattern Maker</div>
+      <div class="pipe-io"><span>TOOL</span>pygarment (GarmentCode). 115k parametric patterns. pip install.</div>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">03 //</div>
+      <div class="pipe-name">Tailor</div>
+      <div class="pipe-io"><span>VALIDATES</span>Seam manifest. Edge classification. ±2mm stitch tolerance. Schema gate.</div>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">04 //</div>
+      <div class="pipe-name">Geometer</div>
+      <div class="pipe-io"><span>PHYSICS</span>XPBD drape simulation. Body collision. Self-collision. Convergence → strain extraction.</div>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">05 //</div>
+      <div class="pipe-name">Archivist</div>
+      <div class="pipe-io"><span>PERSISTS</span>Supabase + pgvector. body_source field. Garment ledger. Verdict history.</div>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">06 //</div>
+      <div class="pipe-name">Fit Verdict</div>
+      <div class="pipe-io"><span>OUTPUT</span>fit_verdict.json. FIT / NO_FIT. clearance_map. ease_map. confidence.</div>
+    </div>
+  </div>
+
+  <div class="flow-diagram reveal">
+    <div class="flow-box">
+      <div class="flow-box-title">Body Input (MVP)</div>
+      <div class="flow-item"><span class="flow-item-key">source</span><span class="flow-item-val">synthetic_mannequin</span></div>
+      <div class="flow-item"><span class="flow-item-key">model</span><span class="flow-item-val">SMPL-X via pygarment</span></div>
+      <div class="flow-item"><span class="flow-item-key">accuracy</span><span class="flow-item-val">0mm (perfect by def.)</span></div>
+      <div class="flow-item"><span class="flow-item-key">confidence</span><span class="flow-item-val">1.0</span></div>
+      <div class="flow-item"><span class="flow-item-key">phase 2</span><span class="flow-item-val">SAM 3D Body + photos</span></div>
+    </div>
+    <div class="flow-arrow-col">→</div>
+    <div class="flow-box">
+      <div class="flow-box-title">Garment Pattern Input</div>
+      <div class="flow-item"><span class="flow-item-key">source</span><span class="flow-item-val">GarmentCodeData (115k)</span></div>
+      <div class="flow-item"><span class="flow-item-key">format</span><span class="flow-item-val">GarmentCode JSON + DXF</span></div>
+      <div class="flow-item"><span class="flow-item-key">panels</span><span class="flow-item-val">4–12 per garment</span></div>
+      <div class="flow-item"><span class="flow-item-key">seam pairs</span><span class="flow-item-val">validated ±2mm</span></div>
+      <div class="flow-item"><span class="flow-item-key">fabric params</span><span class="flow-item-val">stiffness lookup</span></div>
+    </div>
+    <div class="flow-arrow-col">→</div>
+    <div class="flow-box">
+      <div class="flow-box-title">Collision Output</div>
+      <div class="flow-item"><span class="flow-item-key">engine</span><span class="flow-item-val">XPBD (NvidiaWarp)</span></div>
+      <div class="flow-item"><span class="flow-item-key">timesteps</span><span class="flow-item-val">up to 200 iterations</span></div>
+      <div class="flow-item"><span class="flow-item-key">compute</span><span class="flow-item-val">2–10s CPU / ~100–300ms A100</span></div>
+      <div class="flow-item"><span class="flow-item-key">verdict</span><span class="flow-item-val">FIT / NO_FIT</span></div>
+      <div class="flow-item"><span class="flow-item-key">confidence</span><span class="flow-item-val">1.0 mannequin / f(x) photo</span></div>
+      <div class="flow-item"><span class="flow-item-key">clearance map</span><span class="flow-item-val">per-region signed delta_mm</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- MANNEQUIN STRATEGY -->
+<section>
+  <div class="section-label">01b // MVP Body Strategy</div>
+  <h2>Synthetic Mannequin First</h2>
+  <div class="mannequin-callout reveal">
+    <div class="callout-box">
+      <div class="callout-label">// Why</div>
+      <div class="callout-title">Sculptor Deferred to Phase 2</div>
+      <div class="callout-body">Real body scanning from consumer photos introduces the only genuine unknown in the architecture — 2-photo mesh fusion from uncalibrated cameras has no direct open-source comparable. Rather than blocking the physics pipeline on a research spike, we replace the Sculptor with a single mathematically perfect body mesh for Phase 1. The Geometer, Tailor, Archivist, and API are all completely indifferent to how the mesh was produced.</div>
+      <div class="callout-spec">
+        <div class="callout-spec-row"><span class="callout-spec-key">mesh format</span><span class="callout-spec-val green">body_mesh.ply — identical to Sculptor output</span></div>
+        <div class="callout-spec-row"><span class="callout-spec-key">scan_method</span><span class="callout-spec-val">synthetic_mannequin</span></div>
+        <div class="callout-spec-row"><span class="callout-spec-key">accuracy_mm</span><span class="callout-spec-val green">0 — perfect by definition</span></div>
+        <div class="callout-spec-row"><span class="callout-spec-key">confidence</span><span class="callout-spec-val green">1.0 — no uncertainty</span></div>
+        <div class="callout-spec-row"><span class="callout-spec-key">generated via</span><span class="callout-spec-val">SMPL-X shape params (pygarment)</span></div>
+      </div>
+    </div>
+    <div class="callout-box">
+      <div class="callout-label">// What You Gain</div>
+      <div class="callout-title">Three Strategic Advantages</div>
+      <div class="callout-body">
+        <strong style="color:var(--white)">1. Physics validation is clean.</strong> With a perfect mesh, any error in simulation output is the physics engine's fault — not scanning noise.<br><br>
+        <strong style="color:var(--white)">2. Retailer demo works immediately.</strong> Retailers think in size charts. Showing size M fits a size M mannequin and size S doesn't is exactly the right demo.<br><br>
+        <strong style="color:var(--white)">3. Sculptor drops in later with zero downstream changes.</strong> The output contract is already defined. Switching from synthetic to real scans is a body_source enum value change, not an architecture change.
+      </div>
+      <div class="callout-spec" style="margin-top:20px;">
+        <div class="callout-spec-row"><span class="callout-spec-key">Phase 2</span><span class="callout-spec-val yellow">SAM 3D Body + height input + mesh fusion</span></div>
+        <div class="callout-spec-row"><span class="callout-spec-key">Phase 3</span><span class="callout-spec-val yellow">Forma Suit ArUco V2 (±1–2mm)</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AGENTS -->
+<section>
+  <div class="section-label">02 // Agent Roster</div>
+  <h2>The Seven Agents</h2>
+  <div class="agents-grid">
+
+    <div class="agent-card" data-num="01">
+      <div class="agent-role">// Collision Engine</div>
+      <div class="agent-name">The Geometer</div>
+      <div class="agent-desc">Drapes GarmentCode JSON pattern panels over the body mesh using XPBD physics simulation via NvidiaWarp-GarmentCode. Measures mechanical strain per body region at convergence. Hardware-agnostic. Confidence is 1.0 for synthetic mannequin; empirically derived f(scan_accuracy_mm, strain_magnitude, body_region) for photo-based bodies.</div>
+      <div class="agent-specs">
+        <div class="spec-row"><span class="spec-key">IN</span><span class="spec-val">body_mesh.ply + seam_manifest.json</span></div>
+        <div class="spec-row"><span class="spec-key">OUT</span><span class="spec-val">fit_verdict.json + clearance_map + confidence</span></div>
+        <div class="spec-row"><span class="spec-key">STACK</span><span class="spec-val">Python, NvidiaWarp-GarmentCode, trimesh, scipy</span></div>
+        <div class="spec-row"><span class="spec-key">MODEL</span><span class="spec-val red">No LLM — pure physics math</span></div>
+        <div class="spec-row"><span class="spec-key">LICENSE</span><span class="spec-val yellow">Apache 2.0 port in progress</span></div>
+      </div>
+      <div style="margin-top:16px;"><span class="status-pill pill-green">🟢 Green</span></div>
+    </div>
+
+    <div class="agent-card" data-num="02">
+      <div class="agent-role">// DXF Generator</div>
+      <div class="agent-name">The Pattern Maker</div>
+      <div class="agent-desc">Generates parametric sewing patterns using pygarment (GarmentCode, ETH Zurich). 115,000 patterns across all major garment categories from GarmentCodeData — no custom Master Blocks needed for MVP. Future upgrade: ChatGarment (CVPR 2025) for VLM-based pattern generation from product images.</div>
+      <div class="agent-specs">
+        <div class="spec-row"><span class="spec-key">IN</span><span class="spec-val">garment_type, size_spec, fabric</span></div>
+        <div class="spec-row"><span class="spec-key">OUT</span><span class="spec-val">pattern.json + raw_panels.dxf</span></div>
+        <div class="spec-row"><span class="spec-key">STACK</span><span class="spec-val">pygarment, ezdxf, shapely</span></div>
+        <div class="spec-row"><span class="spec-key">DATA</span><span class="spec-val green">GarmentCodeData — 115k patterns</span></div>
+        <div class="spec-row"><span class="spec-key">MODEL</span><span class="spec-val">Gemini Flash (Phase 3 DXF only)</span></div>
+        <div class="spec-row"><span class="spec-key">LICENSE</span><span class="spec-val green">MIT / Apache 2.0 ✓</span></div>
+      </div>
+      <div style="margin-top:16px;"><span class="status-pill pill-green">🟢 Green</span></div>
+    </div>
+
+    <div class="agent-card" data-num="03">
+      <div class="agent-role">// Memory Layer</div>
+      <div class="agent-name">The Archivist</div>
+      <div class="agent-desc">Persists body profiles, garment ledger entries, and fit verdicts. pgvector enables semantic search on garment descriptions. body_source field added from v1.2 — enum["synthetic_mannequin", "standard_photo", "precision_suit"].</div>
+      <div class="agent-specs">
+        <div class="spec-row"><span class="spec-key">IN</span><span class="spec-val">structured artifacts from all agents</span></div>
+        <div class="spec-row"><span class="spec-key">OUT</span><span class="spec-val">stored records + retrieval API</span></div>
+        <div class="spec-row"><span class="spec-key">STACK</span><span class="spec-val">Supabase, Postgres, pgvector</span></div>
+        <div class="spec-row"><span class="spec-key">NEW v1.2</span><span class="spec-val red">body_source: enum field</span></div>
+        <div class="spec-row"><span class="spec-key">MODEL</span><span class="spec-val red">No LLM — structured DB only</span></div>
+        <div class="spec-row"><span class="spec-key">LICENSE</span><span class="spec-val green">Apache 2.0 ✓</span></div>
+      </div>
+      <div style="margin-top:16px;"><span class="status-pill pill-green">🟢 Green</span></div>
+    </div>
+
+    <div class="agent-card" data-num="04">
+      <div class="agent-role">// Orchestrator</div>
+      <div class="agent-name">The Strategist</div>
+      <div class="agent-desc">High-level reasoning, architecture decisions, API design, and inter-agent coordination. Operates via claude.ai for strategic sessions and Claude API for automated orchestration. Touches decisions, specs, and ambiguity — never physics math.</div>
+      <div class="agent-specs">
+        <div class="spec-row"><span class="spec-key">IN</span><span class="spec-val">founder instructions + artifacts</span></div>
+        <div class="spec-row"><span class="spec-key">OUT</span><span class="spec-val">code specs, agent prompts, decisions</span></div>
+        <div class="spec-row"><span class="spec-key">STACK</span><span class="spec-val">Claude Sonnet 4.6 (claude.ai + API)</span></div>
+        <div class="spec-row"><span class="spec-key">MODEL</span><span class="spec-val">claude-sonnet-4-6</span></div>
+        <div class="spec-row"><span class="spec-key">COST</span><span class="spec-val">~$3/M tokens</span></div>
+      </div>
+      <div style="margin-top:16px;"><span class="status-pill pill-green">🟢 Green</span></div>
+    </div>
+
+    <div class="agent-card" data-num="05">
+      <div class="agent-role">// Builder</div>
+      <div class="agent-name">The Executor</div>
+      <div class="agent-desc">Turns Strategist specs into running, tested code via Claude Code CLI. Reads CLAUDE.md for full Forma context on every session. Handles multi-file edits, debugging, GitHub workflows, and CI. Can run as parallel agent swarms for Phase 2+ via Ruflo orchestration.</div>
+      <div class="agent-specs">
+        <div class="spec-row"><span class="spec-key">IN</span><span class="spec-val">spec documents from Strategist</span></div>
+        <div class="spec-row"><span class="spec-key">OUT</span><span class="spec-val">committed, tested code</span></div>
+        <div class="spec-row"><span class="spec-key">STACK</span><span class="spec-val">Claude Code CLI, Cursor Pro</span></div>
+        <div class="spec-row"><span class="spec-key">CONTEXT</span><span class="spec-val green">CLAUDE.md — persistent arch. context</span></div>
+        <div class="spec-row"><span class="spec-key">COST</span><span class="spec-val">$20/mo Cursor Pro</span></div>
+      </div>
+      <div style="margin-top:16px;"><span class="status-pill pill-green">🟢 Green</span></div>
+    </div>
+
+    <div class="agent-card" data-num="06">
+      <div class="agent-role">// Schema Validator</div>
+      <div class="agent-name">The Tailor</div>
+      <div class="agent-desc">Validates pattern panels against the seam schema. For GarmentCode-generated patterns, seam correctness is enforced by construction — Tailor acts as schema converter and quality gate. Gemini Flash edge-ambiguity only in Phase 3 real-world brand DXF ingestion.</div>
+      <div class="agent-specs">
+        <div class="spec-row"><span class="spec-key">IN</span><span class="spec-val">pattern.json / raw_panels.dxf</span></div>
+        <div class="spec-row"><span class="spec-key">OUT</span><span class="spec-val">annotated.dxf + seam_manifest.json</span></div>
+        <div class="spec-row"><span class="spec-key">STACK</span><span class="spec-val">Python, ezdxf, shapely</span></div>
+        <div class="spec-row"><span class="spec-key">MVP MODE</span><span class="spec-val green">Schema converter — no LLM needed</span></div>
+        <div class="spec-row"><span class="spec-key">LICENSE</span><span class="spec-val green">MIT ✓</span></div>
+      </div>
+      <div style="margin-top:16px;"><span class="status-pill pill-green">🟢 Green</span></div>
+    </div>
+
+    <div class="agent-card deferred-card" data-num="07">
+      <div class="agent-role">// Body Twin Generator — Phase 2</div>
+      <div class="agent-name">The Sculptor</div>
+      <div class="agent-desc">Deferred to Phase 2. V1: 2 photos + height input → body mesh (±8–15mm consumer conditions). V2: Forma Suit ArUco markers → precision reconstruction (±1–2mm). Same output schema regardless of mode. Downstream pipeline fully indifferent to body source.</div>
+      <div class="agent-specs">
+        <div class="spec-row"><span class="spec-key">MVP</span><span class="spec-val yellow">Replaced by synthetic mannequin</span></div>
+        <div class="spec-row"><span class="spec-key">V1 IN</span><span class="spec-val">front_photo.jpg + back_photo.jpg + height</span></div>
+        <div class="spec-row"><span class="spec-key">V2 IN</span><span class="spec-val red">Forma Suit + ArUco marker video</span></div>
+        <div class="spec-row"><span class="spec-key">OUT</span><span class="spec-val">body_mesh.ply + body_profile.json</span></div>
+        <div class="spec-row"><span class="spec-key">STACK</span><span class="spec-val">SAM 3D Body, smplx, scipy, Open3D (pytorch3d deferred)</span></div>
+        <div class="spec-row"><span class="spec-key">RISK</span><span class="spec-val yellow">2-photo fusion: go/no-go spike Week 5</span></div>
+      </div>
+      <div style="margin-top:16px;"><span class="status-pill pill-yellow">🟡 Phase 2</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- RISK REGISTER -->
+<section>
+  <div class="section-label">02b // Risk Register</div>
+  <h2>Current Risk Status</h2>
+  <div class="risk-grid reveal">
+    <div class="risk-card"><div class="risk-status">🟢</div><div class="risk-name">XPBD / Geometer</div><div class="risk-desc">NvidiaWarp-GarmentCode exists, documented, production-tested by ETH Zurich. Apache 2.0 port is bounded engineering work.</div></div>
+    <div class="risk-card"><div class="risk-status">🟢</div><div class="risk-name">GarmentCode / Pattern Maker</div><div class="risk-desc">pip install pygarment. 115k patterns. Simulation-ready format. Seam correctness enforced by construction.</div></div>
+    <div class="risk-card"><div class="risk-status">🟢</div><div class="risk-name">Supabase / Archivist</div><div class="risk-desc">Production-proven at scale. SOC2 Type 2. pgvector handles garment ledger comfortably on free tier through MVP.</div></div>
+    <div class="risk-card"><div class="risk-status">🟢</div><div class="risk-name">License (NvidiaWarp)</div><div class="risk-desc">NVIDIA relicensed Warp to Apache 2.0 March 2025. ETH Zurich fork explicitly states intent to follow. Action: email Maria Korosteleva.</div></div>
+    <div class="risk-card"><div class="risk-status">🟢</div><div class="risk-name">Synthetic Mannequin MVP</div><div class="risk-desc">Eliminates all scanning risk from Phase 1. SMPL-X via pygarment. Confidence 1.0. Physics validation is unambiguous.</div></div>
+    <div class="risk-card"><div class="risk-status">🟢</div><div class="risk-name">ArUco / Forma Suit</div><div class="risk-desc">Literature validates sub-mm accuracy (0.44mm translational error). OpenCV is mature. Phase 3 item — no near-term risk.</div></div>
+    <div class="risk-card"><div class="risk-status">🟡</div><div class="risk-name">2-Photo Mesh Fusion</div><div class="risk-desc">Deferred to Phase 2. No direct open-source comparable. Week 5 is a go/no-go spike before committing.</div></div>
+    <div class="risk-card"><div class="risk-status">🟡</div><div class="risk-name">Sculptor Consumer Accuracy</div><div class="risk-desc">Lab: ±8mm. Consumer conditions: ±15–25mm. Requires 30–50 body test pairs to characterise before retailer conversations.</div></div>
+    <div class="risk-card"><div class="risk-status">🟡</div><div class="risk-name">Confidence Formula (photo)</div><div class="risk-desc">Fixed scalar replaced with f(scan_accuracy_mm, strain_magnitude, body_region). Derivation requires empirical test data. Phase 2 workstream.</div></div>
+  </div>
+</section>
+
+<!-- SAMPLE OUTPUT -->
+<section>
+  <div class="section-label">03 // Output Format</div>
+  <h2>The Fit Verdict</h2>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--mid); margin-bottom:48px;">
+    <div class="verdict-mock" style="border:none; border-right:1px solid var(--mid);">
+      <div class="verdict-title">Fit Analysis Result</div>
+      <div class="verdict-result"><div class="verdict-dot"></div>FIT</div>
+      <div class="strain-bars">
+        <div class="strain-row"><span class="strain-label">chest_front</span><div class="strain-bar-bg"><div class="strain-bar-fill green" style="width:22%"></div></div><span class="strain-val green">+12mm</span></div>
+        <div class="strain-row"><span class="strain-label">chest_side</span><div class="strain-bar-bg"><div class="strain-bar-fill green" style="width:15%"></div></div><span class="strain-val green">+8mm</span></div>
+        <div class="strain-row"><span class="strain-label">shoulder_L</span><div class="strain-bar-bg"><div class="strain-bar-fill yellow" style="width:45%"></div></div><span class="strain-val yellow">+24mm</span></div>
+        <div class="strain-row"><span class="strain-label">shoulder_R</span><div class="strain-bar-bg"><div class="strain-bar-fill green" style="width:18%"></div></div><span class="strain-val green">+10mm</span></div>
+        <div class="strain-row"><span class="strain-label">upper_back</span><div class="strain-bar-bg"><div class="strain-bar-fill green" style="width:28%"></div></div><span class="strain-val green">+15mm</span></div>
+        <div class="strain-row"><span class="strain-label">waist</span><div class="strain-bar-bg"><div class="strain-bar-fill green" style="width:60%"></div></div><span class="strain-val green">+32mm ease</span></div>
+      </div>
+    </div>
+    <div class="verdict-mock" style="border:none;">
+      <div class="verdict-title">Fit Analysis Result</div>
+      <div class="verdict-result"><div class="verdict-dot fail"></div>NO FIT</div>
+      <div class="strain-bars">
+        <div class="strain-row"><span class="strain-label">chest_front</span><div class="strain-bar-bg"><div class="strain-bar-fill red" style="width:90%"></div></div><span class="strain-val red">−48mm</span></div>
+        <div class="strain-row"><span class="strain-label">chest_side</span><div class="strain-bar-bg"><div class="strain-bar-fill red" style="width:75%"></div></div><span class="strain-val red">−40mm</span></div>
+        <div class="strain-row"><span class="strain-label">shoulder_L</span><div class="strain-bar-bg"><div class="strain-bar-fill red" style="width:65%"></div></div><span class="strain-val red">−35mm</span></div>
+        <div class="strain-row"><span class="strain-label">shoulder_R</span><div class="strain-bar-bg"><div class="strain-bar-fill red" style="width:60%"></div></div><span class="strain-val red">−32mm</span></div>
+        <div class="strain-row"><span class="strain-label">upper_back</span><div class="strain-bar-bg"><div class="strain-bar-fill yellow" style="width:42%"></div></div><span class="strain-val yellow">−22mm</span></div>
+        <div class="strain-row"><span class="strain-label">waist</span><div class="strain-bar-bg"><div class="strain-bar-fill green" style="width:35%"></div></div><span class="strain-val green">+18mm ease</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="code-block">
+<span class="c">// fit_verdict.json — output schema v1.2</span>
+{
+  <span class="n">"verdict_id"</span>: <span class="s">"vrd_7f3a9c2b4e01"</span>,
+  <span class="n">"fit"</span>: <span class="k">true</span>,
+  <span class="n">"confidence"</span>: <span class="s">1.0</span>,                    <span class="c">// 1.0 for synthetic_mannequin</span>
+  <span class="n">"body_source"</span>: <span class="s">"synthetic_mannequin"</span>,   <span class="c">// NEW v1.2 — enum field</span>
+  <span class="n">"scan_method"</span>: <span class="s">"synthetic_mannequin"</span>,
+  <span class="n">"scan_accuracy_mm"</span>: <span class="s">0</span>,                <span class="c">// 0 (synthetic) | 7 (photo) | 1.5 (suit)</span>
+  <span class="n">"garment_id"</span>: <span class="s">"tshirt_gc_v1_size_M"</span>,
+  <span class="n">"body_profile_id"</span>: <span class="s">"mannequin_sizeM_180cm"</span>,
+  <span class="n">"strain_map"</span>: [
+    { <span class="n">"region"</span>: <span class="s">"chest_front"</span>, <span class="n">"delta_mm"</span>: <span class="s">12</span>, <span class="n">"severity"</span>: <span class="s">"green"</span> },
+    { <span class="n">"region"</span>: <span class="s">"shoulder_left"</span>, <span class="n">"delta_mm"</span>: <span class="s">24</span>, <span class="n">"severity"</span>: <span class="s">"yellow"</span> }
+  ],
+  <span class="n">"ease_map"</span>: [
+    { <span class="n">"region"</span>: <span class="s">"waist"</span>, <span class="n">"excess_mm"</span>: <span class="s">32</span>, <span class="n">"verdict"</span>: <span class="s">"relaxed_fit"</span> }
+  ],
+  <span class="n">"simulation_ms"</span>: <span class="s">94</span>,
+  <span class="n">"fabric_params_used"</span>: { <span class="n">"fabric_id"</span>: <span class="s">"cotton_jersey_default"</span>, <span class="n">"type"</span>: <span class="s">"cotton_jersey"</span>, <span class="n">"density_kg_m2"</span>: <span class="s">0.18</span>, <span class="n">"stretch_stiffness"</span>: <span class="s">40.0</span>, <span class="n">"bend_stiffness"</span>: <span class="s">0.005</span>, <span class="n">"shear_stiffness"</span>: <span class="s">3.0</span>, <span class="n">"damping"</span>: <span class="s">0.995</span> }
+}
+  </div>
+</section>
+
+<!-- INFRASTRUCTURE -->
+<section>
+  <div class="section-label">04 // Infrastructure</div>
+  <h2>Services & Costs</h2>
+  <table class="cost-table reveal">
+    <thead><tr><th>Service</th><th>Purpose</th><th>Agent</th><th>Cost</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Google Colab Pro</td><td>A100 GPU for XPBD batch simulations</td><td>Geometer</td><td class="free">FREE (student)</td><td>Have it</td></tr>
+      <tr><td>pygarment / GarmentCode</td><td>Parametric pattern generation — 115k patterns</td><td>Pattern Maker</td><td class="free">FREE (MIT / Apache 2.0)</td><td>pip install pygarment</td></tr>
+      <tr><td>Gemini 2.0 Flash</td><td>NLP parsing — Phase 3 DXF ingestion only</td><td>Tailor (Phase 3)</td><td class="free">FREE (student)</td><td>Have it</td></tr>
+      <tr><td>SAM 3D Body</td><td>Photo → 3D mesh (Phase 2 Sculptor)</td><td>Sculptor (Phase 2)</td><td class="free">FREE (SAM License ✓)</td><td>Deferred to Phase 2</td></tr>
+      <tr><td>Supabase</td><td>Body profiles, garment ledger, fit verdicts</td><td>Archivist</td><td class="paid">Free tier → $25/mo Pro</td><td>supabase.com</td></tr>
+      <tr><td>Anthropic API</td><td>Claude Sonnet 4.6 as Strategist</td><td>Strategist</td><td class="paid">~$3/M tokens</td><td>api.anthropic.com</td></tr>
+      <tr><td>Claude Code CLI</td><td>Agentic code execution — Executor layer</td><td>Executor</td><td class="paid">Included with API</td><td>npm install -g @anthropic-ai/claude-code</td></tr>
+      <tr><td>Cursor Pro</td><td>AI-assisted IDE for complex multi-file edits</td><td>Executor</td><td class="paid">$20/mo</td><td>cursor.com</td></tr>
+      <tr><td>Vercel</td><td>Fit Verdict API hosting</td><td>All (API layer)</td><td class="paid">Free → $20/mo Pro</td><td>vercel.com</td></tr>
+      <tr><td>GitHub</td><td>Version control, CI/CD</td><td>All</td><td class="free">FREE</td><td>Have it</td></tr>
+      <tr><td>NvidiaWarp-GarmentCode</td><td>XPBD cloth simulation — garment draping + strain</td><td>Geometer</td><td class="free">FREE (Apache 2.0 port)</td><td>Email ETH Zurich + port in progress</td></tr>
+      <tr><td>ezdxf + shapely</td><td>DXF generation + geometry validation</td><td>Pattern Maker, Tailor</td><td class="free">FREE (MIT)</td><td>pip install</td></tr>
+      <tr><td>pytorch3d</td><td>Mesh fusion + registration (Phase 2)</td><td>Sculptor (Phase 2)</td><td class="free">FREE (MIT)</td><td>Deferred to Phase 2</td></tr>
+      <tr><td>trimesh + scipy</td><td>Mesh I/O, KDTree clearance computation, BetaSolver</td><td>Geometer, Sculptor</td><td class="free">FREE (MIT)</td><td>pip install (Phase 1)</td></tr>
+      <tr><td>Open3D</td><td>Point cloud processing (Phase 2)</td><td>Sculptor (Phase 2)</td><td class="free">FREE (MIT)</td><td>Deferred</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:32px; padding:24px; border:1px solid var(--mid); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+    <div>
+      <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">MVP MONTHLY COST (pre-scale)</div>
+      <div style="font-size:11px; color:#555;">Sculptor deferred — scanning costs removed from Phase 1</div>
+    </div>
+    <div style="font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--green);">~$45 / mo</div>
+  </div>
+</section>
+
+<!-- AI ORCHESTRATION -->
+<section>
+  <div class="section-label">05 // Build Model</div>
+  <h2>AI Orchestration Strategy</h2>
+
+  <div class="orch-grid reveal">
+    <div class="orch-card">
+      <div class="orch-layer">// Layer 1 — Strategic</div>
+      <div class="orch-title">Claude (claude.ai)</div>
+      <div class="orch-desc">Architecture decisions, research, specification writing, problem diagnosis, and planning. Every major decision resolved here before any code is written. Output is always a written spec — never vague instructions. This is the Strategist layer.</div>
+      <div class="orch-specs">
+        <div class="orch-row"><span class="orch-key">INPUT</span><span class="orch-val">Founder decisions + architecture questions</span></div>
+        <div class="orch-row"><span class="orch-key">OUTPUT</span><span class="orch-val green">Written specs with I/O contracts + edge cases</span></div>
+        <div class="orch-row"><span class="orch-key">MODEL</span><span class="orch-val">Claude Sonnet 4.6</span></div>
+        <div class="orch-row"><span class="orch-key">TIME</span><span class="orch-val green">~30 min/day</span></div>
+      </div>
+    </div>
+    <div class="orch-card">
+      <div class="orch-layer">// Layer 2 — Execution</div>
+      <div class="orch-title">Claude Code CLI</div>
+      <div class="orch-desc">Turns Strategist specs into running, tested code. Reads CLAUDE.md for persistent Forma context on every session. Handles multi-file edits, debugging, and GitHub workflows. Can spawn parallel agent swarms for Phase 2+ via Ruflo orchestration framework.</div>
+      <div class="orch-specs">
+        <div class="orch-row"><span class="orch-key">INPUT</span><span class="orch-val">Spec docs from Layer 1</span></div>
+        <div class="orch-row"><span class="orch-key">OUTPUT</span><span class="orch-val green">Committed, tested, documented code</span></div>
+        <div class="orch-row"><span class="orch-key">CONTEXT</span><span class="orch-val">CLAUDE.md — persistent architecture file</span></div>
+        <div class="orch-row"><span class="orch-key">PHASE 2+</span><span class="orch-val yellow">Ruflo multi-agent swarms</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:60px;">Daily Operating Rhythm</h2>
+  <div class="rhythm-grid reveal">
+    <div class="rhythm-card">
+      <div class="rhythm-time">Morning</div>
+      <div class="rhythm-title">Direction Setting</div>
+      <div class="rhythm-desc">Review yesterday's output. Identify next 2–3 tasks. Spec them in claude.ai with input/output contracts and acceptance criteria. Export specs as markdown into the repo.</div>
+      <div class="rhythm-duration">~30 min active</div>
+    </div>
+    <div class="rhythm-card">
+      <div class="rhythm-time">Daytime</div>
+      <div class="rhythm-title">Claude Code Executing</div>
+      <div class="rhythm-desc">Open terminal, run `claude`, hand it today's spec files. Background the agent. Work on retailer outreach, research, pitch prep. Claude Code writes, tests, and fixes — you're not watching it type.</div>
+      <div class="rhythm-duration">Passive — AI working</div>
+    </div>
+    <div class="rhythm-card">
+      <div class="rhythm-time">Evening</div>
+      <div class="rhythm-title">Review & Redirect</div>
+      <div class="rhythm-desc">Review diffs Claude Code produced. Accept, reject, or redirect. Flag architecture questions back to Layer 1. Commit what's good. Write tomorrow's specs.</div>
+      <div class="rhythm-duration">~30–60 min active</div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:60px;">What You Cannot Delegate</h2>
+  <div class="no-delegate reveal">
+    <div class="no-delegate-title">These four things must stay with the founder</div>
+    <div class="no-delegate-item"><span class="no-delegate-num">01</span>Go/no-go decisions — does the XPBD clearance map look physically correct? Does the Phase 2 mesh fusion spike produce trustworthy results? Only you can judge this.</div>
+    <div class="no-delegate-item"><span class="no-delegate-num">02</span>Retailer conversations — no AI closes your first contract. Relationship, trust, reading the room.</div>
+    <div class="no-delegate-item"><span class="no-delegate-num">03</span>Spec quality — vague specs produce vague code. Specification writing is your primary technical skill in this model. Invest in it.</div>
+    <div class="no-delegate-item"><span class="no-delegate-num">04</span>Architecture changes — when something doesn't work, diagnosing whether it's a physics problem, schema problem, or integration problem requires architectural judgment. That's Layer 1.</div>
+  </div>
+</section>
+
+<!-- TIMELINE + SUCCESS -->
+<section>
+  <div class="section-label">06 // Build Sequence</div>
+  <h2>Timeline & Success Probability</h2>
+
+  <table class="timeline-table reveal">
+    <thead>
+      <tr><th>Phase</th><th>Planned</th><th class="t-realistic">Solo Full-Time</th><th class="t-ai">AI-Orchestrated</th><th>Success P</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Phase 1: Core Engine</td>
+        <td class="t-planned">4 weeks</td>
+        <td class="t-realistic">5–6 weeks</td>
+        <td class="t-ai">3–4 weeks</td>
+        <td style="color:var(--green)">85–90%</td>
+      </tr>
+      <tr>
+        <td>Phase 2: Ledger + Real Bodies</td>
+        <td class="t-planned">6 weeks</td>
+        <td class="t-realistic">8–10 weeks</td>
+        <td class="t-ai">5–6 weeks</td>
+        <td style="color:var(--yellow)">50–60%</td>
+      </tr>
+      <tr>
+        <td>Phase 3: Scale & Moat</td>
+        <td class="t-planned">8 weeks</td>
+        <td class="t-realistic">12–16 weeks</td>
+        <td class="t-ai">8–10 weeks</td>
+        <td style="color:var(--yellow)">30–40%</td>
+      </tr>
+      <tr>
+        <td style="color:var(--white); font-family:'Syne',sans-serif;">First Commercial Demo</td>
+        <td class="t-planned">18 weeks</td>
+        <td class="t-realistic">~6 months</td>
+        <td class="t-ai" style="font-family:'Syne',sans-serif; font-size:14px;">~4 months</td>
+        <td style="color:var(--green); font-family:'Syne',sans-serif;">POST /verify live</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="padding:24px; border:1px solid var(--mid); border-left:3px solid var(--green); background:var(--dim); margin-top:32px;">
+    <div style="font-size:9px; letter-spacing:3px; color:var(--green); text-transform:uppercase; margin-bottom:12px;">Key Insight</div>
+    <div style="font-size:12px; color:#aaa; line-height:1.9;">The moment you have a working <code style="color:var(--green)">POST /verify</code> endpoint returning a real fit verdict on a real garment — even with a synthetic mannequin — that is the moment to start retailer outreach. Not after Phase 2. Not after real body scanning works. That demo, with a mannequin, is enough to start the conversation and compress the sales cycle.</div>
+  </div>
+
+  <h2 style="margin-top:60px;">Three-Phase Roadmap</h2>
+  <div class="roadmap reveal">
+    <div class="phase">
+      <div class="phase-label">Phase 01 // Weeks 1–4</div>
+      <div class="phase-title">The Core Engine</div>
+      <div class="phase-item highlight">Week 1: Generate SMPL-X mannequin (BetaSolver if needed). First XPBD smoke test. Go/no-go gate.</div>
+      <div class="phase-item highlight">Week 1: Validate clearance maps against tape-measure truth. Size S on size M → red. XL → green ease.</div>
+      <div class="phase-item">Week 2: Physics hardening — extended size range, second garment type, fabric sensitivity. Go/no-go gate.</div>
+      <div class="phase-item">Week 2: Wire programmatic pipeline function for batch processing.</div>
+      <div class="phase-item">Week 3: Archivist Supabase schema — body_source field from day one.</div>
+      <div class="phase-item">Week 4: REST API on Vercel — POST /verify → fit_verdict.json. Begin retailer outreach.</div>
+    </div>
+    <div class="phase">
+      <div class="phase-label">Phase 02 // Weeks 5–10</div>
+      <div class="phase-title">The Ledger + Real Bodies</div>
+      <div class="phase-item highlight">Week 5: Sculptor V1 spike — SAM 3D Body + height input + 2-photo fusion. Go/no-go gate.</div>
+      <div class="phase-item highlight">Week 5–6: 30–50 body scan tests. Derive confidence formula empirically.</div>
+      <div class="phase-item">Expand Pattern Maker to 5 garment categories via GarmentCodeData.</div>
+      <div class="phase-item">Build Fabric Library — 8 material types with XPBD stiffness params.</div>
+      <div class="phase-item">Shopify integration POC — "Verified Fit" badge.</div>
+      <div class="phase-item">Complete Apache 2.0 Warp port before first revenue.</div>
+    </div>
+    <div class="phase">
+      <div class="phase-label">Phase 03 // Weeks 11–18</div>
+      <div class="phase-title">Scale & Moat</div>
+      <div class="phase-item">Brand DXF ingestion — real factory patterns. Tailor + Gemini Flash.</div>
+      <div class="phase-item">Phone scan upgrade — LiDAR + photogrammetry.</div>
+      <div class="phase-item">Batch processing on Colab A100 for garment indexing.</div>
+      <div class="phase-item">Shopping agent API — Citrini / AI agent integrations.</div>
+      <div class="phase-item">Forma Suit prototype — ArUco fiducial grid layout.</div>
+      <div class="phase-item">OpenCV ArUco → 3D triangulation → Sculptor V2 (±1–2mm).</div>
+      <div class="phase-item">First paid retailer contract.</div>
+      <div class="phase-item">Seed round materials with live demo + return rate data.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">FORMA</div>
+  <div>THE GLOBAL FIT LEDGER // ARCHITECTURE v1.2.1</div>
+  <div>MATHEMATICAL PHYSICAL TRUTH</div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  const strainObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.strain-bar-fill').forEach(bar => {
+          const w = bar.style.width;
+          bar.style.width = '0%';
+          setTimeout(() => bar.style.width = w, 100);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+  document.querySelectorAll('.verdict-mock').forEach(el => strainObserver.observe(el));
+</script>
+</body>
+</html>

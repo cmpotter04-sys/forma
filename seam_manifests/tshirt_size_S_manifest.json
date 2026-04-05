@@ -1,0 +1,1044 @@
+{
+  "garment_id": "tshirt_gc_v1_size_S",
+  "panel_count": 8,
+  "panels": [
+    {
+      "panel_id": "left_btorso",
+      "vertex_count": 62,
+      "edge_count": 7,
+      "edges": [
+        {
+          "edge_id": "left_btorso_e0",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 325.049,
+          "label": "bottom_hem"
+        },
+        {
+          "edge_id": "left_btorso_e1",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22
+          ],
+          "arc_length_mm": 112.416,
+          "label": "back_seam_1"
+        },
+        {
+          "edge_id": "left_btorso_e2",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 37.763,
+          "label": "back_seam_2"
+        },
+        {
+          "edge_id": "left_btorso_e3",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "arc_length_mm": 5.989,
+          "label": "back_seam_3"
+        },
+        {
+          "edge_id": "left_btorso_e4",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "arc_length_mm": 174.448,
+          "label": "back_seam_4"
+        },
+        {
+          "edge_id": "left_btorso_e5",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 209.383,
+          "label": "back_seam_5"
+        },
+        {
+          "edge_id": "left_btorso_e6",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 210.037,
+          "label": "neckline"
+        }
+      ]
+    },
+    {
+      "panel_id": "left_ftorso",
+      "vertex_count": 72,
+      "edge_count": 7,
+      "edges": [
+        {
+          "edge_id": "left_ftorso_e0",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 229.811,
+          "label": "bottom_hem"
+        },
+        {
+          "edge_id": "left_ftorso_e1",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 210.098,
+          "label": "front_seam_1"
+        },
+        {
+          "edge_id": "left_ftorso_e2",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "arc_length_mm": 6.03,
+          "label": "front_seam_2"
+        },
+        {
+          "edge_id": "left_ftorso_e3",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33
+          ],
+          "arc_length_mm": 185.318,
+          "label": "front_seam_3"
+        },
+        {
+          "edge_id": "left_ftorso_e4",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 37.763,
+          "label": "front_seam_4"
+        },
+        {
+          "edge_id": "left_ftorso_e5",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ],
+          "arc_length_mm": 162.312,
+          "label": "front_seam_5"
+        },
+        {
+          "edge_id": "left_ftorso_e6",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 254.384,
+          "label": "neckline"
+        }
+      ]
+    },
+    {
+      "panel_id": "left_sleeve_f",
+      "vertex_count": 40,
+      "edge_count": 4,
+      "edges": [
+        {
+          "edge_id": "left_sleeve_f_e0",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 249.95,
+          "label": "sleeve_cap"
+        },
+        {
+          "edge_id": "left_sleeve_f_e1",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36
+          ],
+          "arc_length_mm": 185.351,
+          "label": "sleeve_seam_1"
+        },
+        {
+          "edge_id": "left_sleeve_f_e2",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 182.347,
+          "label": "sleeve_seam_2"
+        },
+        {
+          "edge_id": "left_sleeve_f_e3",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 170.285,
+          "label": "sleeve_hem"
+        }
+      ]
+    },
+    {
+      "panel_id": "left_sleeve_b",
+      "vertex_count": 46,
+      "edge_count": 6,
+      "edges": [
+        {
+          "edge_id": "left_sleeve_b_e0",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 170.285,
+          "label": "sleeve_cap"
+        },
+        {
+          "edge_id": "left_sleeve_b_e1",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 182.347,
+          "label": "sleeve_seam_1"
+        },
+        {
+          "edge_id": "left_sleeve_b_e2",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "arc_length_mm": 6.03,
+          "label": "sleeve_seam_2"
+        },
+        {
+          "edge_id": "left_sleeve_b_e3",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34
+          ],
+          "arc_length_mm": 174.481,
+          "label": "sleeve_seam_3"
+        },
+        {
+          "edge_id": "left_sleeve_b_e4",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "arc_length_mm": 5.99,
+          "label": "sleeve_seam_4"
+        },
+        {
+          "edge_id": "left_sleeve_b_e5",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 249.95,
+          "label": "sleeve_hem"
+        }
+      ]
+    },
+    {
+      "panel_id": "right_ftorso",
+      "vertex_count": 72,
+      "edge_count": 7,
+      "edges": [
+        {
+          "edge_id": "right_ftorso_e0",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 254.384,
+          "label": "bottom_hem"
+        },
+        {
+          "edge_id": "right_ftorso_e1",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ],
+          "arc_length_mm": 162.312,
+          "label": "front_seam_1"
+        },
+        {
+          "edge_id": "right_ftorso_e2",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 37.763,
+          "label": "front_seam_2"
+        },
+        {
+          "edge_id": "right_ftorso_e3",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33
+          ],
+          "arc_length_mm": 185.318,
+          "label": "front_seam_3"
+        },
+        {
+          "edge_id": "right_ftorso_e4",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "arc_length_mm": 6.03,
+          "label": "front_seam_4"
+        },
+        {
+          "edge_id": "right_ftorso_e5",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 210.098,
+          "label": "front_seam_5"
+        },
+        {
+          "edge_id": "right_ftorso_e6",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 229.811,
+          "label": "neckline"
+        }
+      ]
+    },
+    {
+      "panel_id": "right_sleeve_b",
+      "vertex_count": 46,
+      "edge_count": 6,
+      "edges": [
+        {
+          "edge_id": "right_sleeve_b_e0",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 249.95,
+          "label": "sleeve_cap"
+        },
+        {
+          "edge_id": "right_sleeve_b_e1",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "arc_length_mm": 5.99,
+          "label": "sleeve_seam_1"
+        },
+        {
+          "edge_id": "right_sleeve_b_e2",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34
+          ],
+          "arc_length_mm": 174.481,
+          "label": "sleeve_seam_2"
+        },
+        {
+          "edge_id": "right_sleeve_b_e3",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "arc_length_mm": 6.03,
+          "label": "sleeve_seam_3"
+        },
+        {
+          "edge_id": "right_sleeve_b_e4",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 182.347,
+          "label": "sleeve_seam_4"
+        },
+        {
+          "edge_id": "right_sleeve_b_e5",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 170.285,
+          "label": "sleeve_hem"
+        }
+      ]
+    },
+    {
+      "panel_id": "right_sleeve_f",
+      "vertex_count": 40,
+      "edge_count": 4,
+      "edges": [
+        {
+          "edge_id": "right_sleeve_f_e0",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 170.285,
+          "label": "sleeve_cap"
+        },
+        {
+          "edge_id": "right_sleeve_f_e1",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 182.347,
+          "label": "sleeve_seam_1"
+        },
+        {
+          "edge_id": "right_sleeve_f_e2",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36
+          ],
+          "arc_length_mm": 185.351,
+          "label": "sleeve_seam_2"
+        },
+        {
+          "edge_id": "right_sleeve_f_e3",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 249.95,
+          "label": "sleeve_hem"
+        }
+      ]
+    },
+    {
+      "panel_id": "right_btorso",
+      "vertex_count": 62,
+      "edge_count": 7,
+      "edges": [
+        {
+          "edge_id": "right_btorso_e0",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 210.037,
+          "label": "bottom_hem"
+        },
+        {
+          "edge_id": "right_btorso_e1",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 209.383,
+          "label": "back_seam_1"
+        },
+        {
+          "edge_id": "right_btorso_e2",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "arc_length_mm": 174.448,
+          "label": "back_seam_2"
+        },
+        {
+          "edge_id": "right_btorso_e3",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "arc_length_mm": 5.989,
+          "label": "back_seam_3"
+        },
+        {
+          "edge_id": "right_btorso_e4",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 37.763,
+          "label": "back_seam_4"
+        },
+        {
+          "edge_id": "right_btorso_e5",
+          "vertices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22
+          ],
+          "arc_length_mm": 112.416,
+          "label": "back_seam_5"
+        },
+        {
+          "edge_id": "right_btorso_e6",
+          "vertices": [
+            0,
+            1
+          ],
+          "arc_length_mm": 325.049,
+          "label": "neckline"
+        }
+      ]
+    }
+  ],
+  "seam_pairs": [
+    {
+      "seam_id": "seam_001",
+      "edge_a": "left_sleeve_f_e0",
+      "edge_b": "left_sleeve_b_e5",
+      "arc_length_diff_mm": 0.0,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_002",
+      "edge_a": "left_sleeve_f_e2",
+      "edge_b": "left_sleeve_b_e1",
+      "arc_length_diff_mm": 0.0,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_003",
+      "edge_a": "left_sleeve_f_e1",
+      "edge_b": "left_ftorso_e3",
+      "arc_length_diff_mm": 0.033,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_004",
+      "edge_a": "left_sleeve_b_e2",
+      "edge_b": "left_ftorso_e2",
+      "arc_length_diff_mm": 0.001,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_005",
+      "edge_a": "left_sleeve_b_e3",
+      "edge_b": "left_btorso_e4",
+      "arc_length_diff_mm": 0.033,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_006",
+      "edge_a": "left_sleeve_b_e4",
+      "edge_b": "left_btorso_e3",
+      "arc_length_diff_mm": 0.001,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_007",
+      "edge_a": "left_ftorso_e4",
+      "edge_b": "left_btorso_e2",
+      "arc_length_diff_mm": 0.0,
+      "valid": true,
+      "stitch_type": "standard"
+    },
+    {
+      "seam_id": "seam_008",
+      "edge_a": "left_ftorso_e1",
+      "edge_b": "left_btorso_e5",
+      "arc_length_diff_mm": 0.715,
+      "valid": true,
+      "stitch_type": "standard"
+    },
+    {
+      "seam_id": "seam_009",
+      "edge_a": "right_sleeve_f_e3",
+      "edge_b": "right_sleeve_b_e0",
+      "arc_length_diff_mm": 0.0,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_010",
+      "edge_a": "right_sleeve_f_e1",
+      "edge_b": "right_sleeve_b_e4",
+      "arc_length_diff_mm": 0.0,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_011",
+      "edge_a": "right_sleeve_f_e2",
+      "edge_b": "right_ftorso_e3",
+      "arc_length_diff_mm": 0.033,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_012",
+      "edge_a": "right_sleeve_b_e3",
+      "edge_b": "right_ftorso_e4",
+      "arc_length_diff_mm": 0.001,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_013",
+      "edge_a": "right_sleeve_b_e2",
+      "edge_b": "right_btorso_e2",
+      "arc_length_diff_mm": 0.033,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_014",
+      "edge_a": "right_sleeve_b_e1",
+      "edge_b": "right_btorso_e3",
+      "arc_length_diff_mm": 0.001,
+      "valid": true,
+      "stitch_type": "gather"
+    },
+    {
+      "seam_id": "seam_015",
+      "edge_a": "right_ftorso_e2",
+      "edge_b": "right_btorso_e4",
+      "arc_length_diff_mm": 0.0,
+      "valid": true,
+      "stitch_type": "standard"
+    },
+    {
+      "seam_id": "seam_016",
+      "edge_a": "right_ftorso_e5",
+      "edge_b": "right_btorso_e1",
+      "arc_length_diff_mm": 0.715,
+      "valid": true,
+      "stitch_type": "standard"
+    },
+    {
+      "seam_id": "seam_017",
+      "edge_a": "right_ftorso_e0",
+      "edge_b": "left_ftorso_e6",
+      "arc_length_diff_mm": 0.0,
+      "valid": true,
+      "stitch_type": "standard"
+    },
+    {
+      "seam_id": "seam_018",
+      "edge_a": "right_btorso_e6",
+      "edge_b": "left_btorso_e0",
+      "arc_length_diff_mm": 0.0,
+      "valid": true,
+      "stitch_type": "standard"
+    }
+  ],
+  "validation": {
+    "all_seams_valid": true,
+    "max_arc_length_diff_mm": 0.715,
+    "tolerance_mm": 2.0,
+    "unmatched_edges": [
+      "left_btorso_e1",
+      "left_btorso_e6",
+      "left_ftorso_e0",
+      "left_ftorso_e5",
+      "left_sleeve_b_e0",
+      "left_sleeve_f_e3",
+      "right_btorso_e0",
+      "right_btorso_e5",
+      "right_ftorso_e1",
+      "right_ftorso_e6",
+      "right_sleeve_b_e5",
+      "right_sleeve_f_e0"
+    ],
+    "total_seam_pairs": 18
+  }
+}

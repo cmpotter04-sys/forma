@@ -1,0 +1,93 @@
+{
+  "verdict_id": "vrd_c0a71d62c01b",
+  "fit": true,
+  "confidence": 1.0,
+  "body_source": "synthetic_mannequin",
+  "scan_method": "synthetic_mannequin",
+  "scan_accuracy_mm": 0,
+  "garment_id": "tshirt_gc_v1_size_M",
+  "body_profile_id": "makehuman_male_M",
+  "strain_map": [
+    {
+      "region": "chest_front",
+      "delta_mm": 9.897,
+      "severity": "green",
+      "median_strain_ratio": 1.0081
+    },
+    {
+      "region": "chest_side",
+      "delta_mm": 8.224,
+      "severity": "green",
+      "median_strain_ratio": 1.0112
+    },
+    {
+      "region": "shoulder_left",
+      "delta_mm": 7.552,
+      "severity": "green",
+      "median_strain_ratio": 1.019
+    },
+    {
+      "region": "shoulder_right",
+      "delta_mm": 9.046,
+      "severity": "yellow",
+      "median_strain_ratio": 1.1085
+    },
+    {
+      "region": "upper_back",
+      "delta_mm": 9.904,
+      "severity": "green",
+      "median_strain_ratio": 1.0038
+    },
+    {
+      "region": "waist",
+      "delta_mm": 7.958,
+      "severity": "green",
+      "median_strain_ratio": 1.0152
+    }
+  ],
+  "ease_map": [
+    {
+      "region": "chest_front",
+      "excess_mm": 9.897,
+      "verdict": "standard_fit"
+    },
+    {
+      "region": "chest_side",
+      "excess_mm": 8.224,
+      "verdict": "standard_fit"
+    },
+    {
+      "region": "shoulder_left",
+      "excess_mm": 7.552,
+      "verdict": "standard_fit"
+    },
+    {
+      "region": "shoulder_right",
+      "excess_mm": 9.046,
+      "verdict": "standard_fit"
+    },
+    {
+      "region": "upper_back",
+      "excess_mm": 9.904,
+      "verdict": "standard_fit"
+    },
+    {
+      "region": "waist",
+      "excess_mm": 7.958,
+      "verdict": "standard_fit"
+    }
+  ],
+  "simulation_ms": 1222,
+  "convergence_step": 200,
+  "final_kinetic_energy_j": 7.698423895637047e-05,
+  "tunnel_through_pct": 0.0,
+  "fabric_params_used": {
+    "fabric_id": "denim_12oz",
+    "type": "denim",
+    "density_kg_m2": 0.4,
+    "stretch_stiffness": 120.0,
+    "bend_stiffness": 0.08,
+    "shear_stiffness": 15.0,
+    "damping": 0.99
+  }
+}

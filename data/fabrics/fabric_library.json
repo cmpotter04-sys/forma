@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "fabrics": {
+    "cotton_jersey_default": {
+      "fabric_id": "cotton_jersey_default",
+      "type": "cotton_jersey",
+      "description": "Standard weight cotton jersey knit, typical for basic T-shirts",
+      "density_kg_m2": 0.18,
+      "stretch_stiffness": 40.0,
+      "bend_stiffness": 0.005,
+      "shear_stiffness": 3.0,
+      "damping": 0.995,
+      "gravity_scale": 1.0,
+      "notes": "Values calibrated to GarmentCode default simulation parameters"
+    },
+    "cotton_jersey_heavy": {
+      "fabric_id": "cotton_jersey_heavy",
+      "type": "cotton_jersey",
+      "description": "Heavy cotton jersey, thick T-shirts and sweatshirts",
+      "density_kg_m2": 0.30,
+      "stretch_stiffness": 55.0,
+      "bend_stiffness": 0.015,
+      "shear_stiffness": 5.0,
+      "damping": 0.993,
+      "gravity_scale": 1.0,
+      "notes": "Phase 2 addition"
+    },
+    "polyester_woven": {
+      "fabric_id": "polyester_woven",
+      "type": "polyester_woven",
+      "description": "Lightweight polyester plain weave, dress shirts",
+      "density_kg_m2": 0.12,
+      "stretch_stiffness": 80.0,
+      "bend_stiffness": 0.008,
+      "shear_stiffness": 8.0,
+      "damping": 0.997,
+      "gravity_scale": 1.0,
+      "notes": "Phase 2 addition"
+    },
+    "denim_12oz": {
+      "fabric_id": "denim_12oz",
+      "type": "denim",
+      "description": "Medium weight denim, standard jeans",
+      "density_kg_m2": 0.40,
+      "stretch_stiffness": 120.0,
+      "bend_stiffness": 0.08,
+      "shear_stiffness": 15.0,
+      "damping": 0.990,
+      "gravity_scale": 1.0,
+      "notes": "Phase 2 addition"
+    },
+    "silk_charmeuse": {
+      "fabric_id": "silk_charmeuse",
+      "type": "silk_charmeuse",
+      "description": "Lightweight silk charmeuse, dresses and blouses",
+      "density_kg_m2": 0.07,
+      "stretch_stiffness": 25.0,
+      "bend_stiffness": 0.001,
+      "shear_stiffness": 1.5,
+      "damping": 0.998,
+      "gravity_scale": 1.0,
+      "notes": "Phase 2 addition"
+    }
+  }
+}

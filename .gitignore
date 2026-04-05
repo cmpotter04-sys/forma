@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Warp / GPU artifacts
+*.ptx
+*.cubin
+
+# Data / large files
+*.ply
+*.obj
+*.stl
+data/cache/
+*.npy
+*.npz
+
+# Ruflo runtime
+.claude-flow/logs/
+.claude-flow/data/
+.claude-flow/sessions/
+
+# Secrets
+.env
+*.pem
+*.key
