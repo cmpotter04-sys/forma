@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-05  
 **Local test count:** 475 passing, 7 skipped  
-**GitHub:** cmpotter04-sys/forma (main, commit c622982)
+**GitHub:** cmpotter04-sys/forma (main, commit a7e07b6)
 
 ---
 
@@ -10,14 +10,14 @@
 
 Phase 2 Stage 1 ("The Rosetta Stone") — GPU transition. CPU solver done, HOOD/ContourCraft validation in progress on Kaggle.
 
-**The one blocking thing:** HOOD validation on Kaggle must pass before Warp parity tests or the Three.js visualizer can be built. Kaggle v22 is RUNNING right now.
+**The one blocking thing:** HOOD validation on Kaggle must pass before Warp parity tests or the Three.js visualizer can be built. Kaggle v23 is RUNNING right now.
 
 ---
 
 ## Kaggle HOOD Validation Status
 
 **Kernel:** calvinpotter/forma-hood-validation  
-**Current version:** v22 (RUNNING as of this handoff)  
+**Current version:** v23 (RUNNING as of this handoff)  
 **Push command:**
 ```bash
 cd ~/Desktop/Forma\ 4.4.26/notebooks && python3 -c "from kaggle import KaggleApi; api=KaggleApi(); api.authenticate(); api.kernels_push('.')"
@@ -33,7 +33,7 @@ mkdir -p /tmp/kaggle_v21_output && python3 -c "from kaggle import KaggleApi; api
 
 ---
 
-## Iteration History (v13–v22)
+## Iteration History (v13–v23)
 
 | Version | Fixed | Error |
 |---------|-------|-------|
@@ -46,7 +46,8 @@ mkdir -p /tmp/kaggle_v21_output && python3 -c "from kaggle import KaggleApi; api
 | v19 | Wrote `version` to zip (wrong: wrote `'version'` not `'{prefix}/version'`) | Same ZIP version error |
 | v20 | Correct prefix detection → wrote `'ccraft_data/version'` | `PytorchStreamReader failed locating file data.pkl` |
 | v21 | Correct data bundle extraction + data.pkl alias + tensor fix | `IndexError: too many indices for array` in `from_any_pose.py:220` |
-| v22 | **Coarse edge 1D→2D reshape** (see below) — RUNNING | TBD |
+| v22 | Coarse edge 1D→2D reshape | `AcceleratorError: no kernel image` — P100 (sm_60) incompatible with PyTorch 2.10+cu128 |
+| v23 | **Auto-detect GPU + downgrade PyTorch for P100** — RUNNING | TBD |
 
 ---
 
