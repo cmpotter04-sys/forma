@@ -35,6 +35,7 @@ ensures pipeline.py can be imported on CPU-only machines without error.
 from __future__ import annotations
 
 import math
+import os
 import pickle
 import sys
 import tempfile
@@ -144,6 +145,12 @@ def _build_contourcraft_runner(contourcraft_root: str | Path, checkpoint_path: s
     config_dir = str(Path(contourcraft_root) / "configs")
     modules, config = load_params("aux/from_any_pose", config_dir=config_dir)
 
+    # Allow CPU fallback on GPUs with unsupported compute capability (e.g. P100)
+    _device = os.environ.get("HOOD_DEVICE", "cuda:0")
+    from omegaconf import OmegaConf, open_dict
+    with open_dict(config):
+        config.device = _device
+
     runner_module, runner, _aux = create_runner(modules, config, create_aux_modules=False)
 
     # PyTorch 2.x requires two records in the checkpoint ZIP:
@@ -191,7 +198,9 @@ def _build_contourcraft_runner(contourcraft_root: str | Path, checkpoint_path: s
         # weights_only kwarg not available in older torch builds
         state_dict = torch.load(str(checkpoint_path), map_location="cpu")
     runner.load_state_dict(state_dict["training_module"])
-    runner.to("cuda:0")
+    _device = os.environ.get("HOOD_DEVICE", "cuda:0")
+    runner.to(_device)
+    runner.mcfg.device = _device  # patch config so rollout uses correct device
     runner.eval()
 
     return runner_module, runner
@@ -360,7 +369,8 @@ def _run_contourcraft_inference(
         )
 
         sample = next(iter(dataloader))
-        sample = move2device(sample, "cuda:0")
+        _device = os.environ.get("HOOD_DEVICE", "cuda:0")
+        sample = move2device(sample, _device)
 
         with torch.no_grad():
             trajectories_dict = runner.valid_rollout(sample, n_steps=n_steps, bare=True)
