@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-05  
 **Local test count:** 475 passing, 7 skipped  
-**GitHub:** cmpotter04-sys/forma (main, commit 3656860)
+**GitHub:** cmpotter04-sys/forma (main, commit c622982)
 
 ---
 
@@ -10,14 +10,14 @@
 
 Phase 2 Stage 1 ("The Rosetta Stone") — GPU transition. CPU solver done, HOOD/ContourCraft validation in progress on Kaggle.
 
-**The one blocking thing:** HOOD validation on Kaggle must pass before Warp parity tests or the Three.js visualizer can be built. Kaggle v21 is RUNNING right now.
+**The one blocking thing:** HOOD validation on Kaggle must pass before Warp parity tests or the Three.js visualizer can be built. Kaggle v22 is RUNNING right now.
 
 ---
 
 ## Kaggle HOOD Validation Status
 
 **Kernel:** calvinpotter/forma-hood-validation  
-**Current version:** v21 (RUNNING as of this handoff)  
+**Current version:** v22 (RUNNING as of this handoff)  
 **Push command:**
 ```bash
 cd ~/Desktop/Forma\ 4.4.26/notebooks && python3 -c "from kaggle import KaggleApi; api=KaggleApi(); api.authenticate(); api.kernels_push('.')"
@@ -33,7 +33,7 @@ mkdir -p /tmp/kaggle_v21_output && python3 -c "from kaggle import KaggleApi; api
 
 ---
 
-## Iteration History (v13–v21)
+## Iteration History (v13–v22)
 
 | Version | Fixed | Error |
 |---------|-------|-------|
@@ -45,7 +45,8 @@ mkdir -p /tmp/kaggle_v21_output && python3 -c "from kaggle import KaggleApi; api
 | v18 | Dataclass patch extended to ALL CC files | `torch.load` fails — missing `version` ZIP record |
 | v19 | Wrote `version` to zip (wrong: wrote `'version'` not `'{prefix}/version'`) | Same ZIP version error |
 | v20 | Correct prefix detection → wrote `'ccraft_data/version'` | `PytorchStreamReader failed locating file data.pkl` |
-| v21 | **TWO fixes applied** (see below) — RUNNING | TBD |
+| v21 | Correct data bundle extraction + data.pkl alias + tensor fix | `IndexError: too many indices for array` in `from_any_pose.py:220` |
+| v22 | **Coarse edge 1D→2D reshape** (see below) — RUNNING | TBD |
 
 ---
 
@@ -84,16 +85,36 @@ else:
 
 ---
 
-## If v21 Fails
+## What v22 Fixes
 
-Check the log for the new error. After extraction, the `ckpt_version_patch` cell prints the ZIP entries of the real `contourcraft.pth` — inspect that output. Likely candidates:
+### Fix D — Coarse edge 1D→2D reshape (`hood_simulate.py:_build_garment_template_pkl`)
 
-1. **ContourCraft inference fails accessing `aux_data/`** — check whether `DEFAULTS.data_root` is set to `ccraft_data/` and that `ccraft_data/aux_data/smpl_aux.pkl` exists after extraction.
-2. **`make_fromanypose_dataloader` import error** — this function in `utils/datasets.py` has not been audited. Check what it imports at the top of the file.
-3. **CUDA OOM** — extraction + pytorch3d build + model load is tight on T4. Unlikely but possible.
-4. **The real `contourcraft.pth` also has a non-standard pickle name** — the `ckpt_version_patch` cell will print the ZIP entries. If it says `WARNING: no .pkl found`, you need to inspect the actual ZIP structure.
+**v21 error:** `IndexError: too many indices for array: array is 1-dimensional, but 2 were indexed` at `from_any_pose.py:220`.
 
-To debug, add a print of all ZIP entries to the patch cell:
+**Root cause:** `add_coarse_edges()` calls `make_coarse_edges()` which returns `np.array(G.edges)`. When a coarse-level subsampled graph has zero edges (common for our 655-vertex garment at higher coarse levels), `np.array([])` is shape `(0,)` not `(0, 2)`. The `from_any_pose.py` code at line 220 does `edges_coarse[:, [1, 0]]` which fails on 1D arrays.
+
+**v22 fix:** After `add_coarse_edges()`, post-process all edge arrays:
+```python
+if "coarse_edges" in garment_dict:
+    for center_key, level_dict in garment_dict["coarse_edges"].items():
+        for level_key, edges_arr in level_dict.items():
+            edges_arr = np.asarray(edges_arr)
+            if edges_arr.ndim == 1:
+                level_dict[level_key] = edges_arr.reshape(0, 2)
+```
+
+---
+
+## If v22 Fails
+
+Check the log for the new error. Likely candidates (after the coarse edge fix):
+
+1. **`runner.load_state_dict(state_dict["training_module"])` key error** — the checkpoint structure may not have the `training_module` key. Print `state_dict.keys()` to check.
+2. **CUDA OOM** — extraction + pytorch3d build + model load + 200-step rollout on 655-vertex garment + 9k-vertex body. Unlikely on T4 (16 GB) but possible.
+3. **`ccraft` runner import error** — `runners/ccraft.py` has more imports that may fail (e.g. `utils/icontour.py` imports). The Python 3.12 dataclass patch handles some, but new import-time errors are possible.
+4. **Shape mismatch in model forward pass** — Our garment mesh has 655 vertices and 810 faces, which may differ from ContourCraft's expected SMPL-based garment topology.
+
+To debug, download logs:
 ```python
 with zipfile.ZipFile(CHECKPOINT_PATH, 'r') as zf:
     print('\n'.join(zf.namelist()))
@@ -198,10 +219,10 @@ CPU clearance baseline (v13, male M + tshirt M, cotton_jersey_default):
 
 ## What This Session Did
 
-1. Identified v20 error: `PytorchStreamReader failed locating file data.pkl`
-2. Identified true root cause: Google Drive file is `ccraft_data.zip` data bundle, not model checkpoint — previous sessions were calling `torch.load()` on the entire data archive
-3. Confirmed v21 notebook already had the extraction fix (from linter/previous session)
-4. Added defense fix: `data.pkl` alias for old-format PyTorch checkpoints
-5. Added defense fix: `detach().cpu().numpy()` for CUDA tensor output from `valid_rollout`
-6. Committed all fixes (commit `3656860`) and pushed to GitHub + Kaggle v21
-7. v21 is RUNNING as of handoff — should be ~10–15 min into its run
+1. Identified v21 error: `IndexError: too many indices for array: array is 1-dimensional, but 2 were indexed` at `from_any_pose.py:220`
+2. Root cause: `make_coarse_edges()` returns `np.array(G.edges)` — when a coarse-level graph has zero edges, this is shape `(0,)` not `(0, 2)`. Our 655-vertex garment mesh produces empty graphs at high coarse levels.
+3. Fixed in `_build_garment_template_pkl()`: post-process all coarse edge arrays to ensure 2D shape `(E, 2)`
+4. Confirmed checkpoint loads OK: prefix `step_0000054400`, 97.7 MB, has `data.pkl` — no patch needed
+5. Pre-audited ContourCraft pipeline: `from_any_pose.py` imports, `BareMeshBodyBuilder`, `CollisionPreprocessor`, `valid_rollout` — all clean
+6. Committed fix (commit `c622982`) and pushed to GitHub + Kaggle v22
+7. v22 is RUNNING — polling every 90 seconds
