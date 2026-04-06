@@ -20,7 +20,16 @@ import pytest
 
 # Module-level skip: if warp is not importable, skip every test in this file.
 # pytest.importorskip() must be called at module scope (not inside a function).
-warp = pytest.importorskip("warp", reason="warp-lang not installed — skipping parity tests")
+pytest.importorskip("warp", reason="warp-lang not installed — skipping parity tests")
+
+# Also skip if warp.sim is unavailable (CPU-only PyPI build, no GPU runtime).
+try:
+    import warp.sim  # noqa: F401
+except (ImportError, Exception):
+    pytest.skip(
+        "warp.sim not available — GPU runtime required for parity tests",
+        allow_module_level=True,
+    )
 
 # ---------------------------------------------------------------------------
 # Path setup

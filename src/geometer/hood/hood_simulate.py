@@ -146,7 +146,23 @@ def _build_contourcraft_runner(contourcraft_root: str | Path, checkpoint_path: s
 
     runner_module, runner, _aux = create_runner(modules, config, create_aux_modules=False)
 
-    state_dict = torch.load(str(checkpoint_path), map_location="cpu")
+    # PyTorch 2.6+ requires a 'version' record in the checkpoint ZIP.
+    # Some older checkpoints are missing it. Add it in-place if needed.
+    import zipfile
+    try:
+        with zipfile.ZipFile(str(checkpoint_path), 'r') as _zf:
+            _missing_version = not any('version' in _n for _n in _zf.namelist())
+        if _missing_version:
+            with zipfile.ZipFile(str(checkpoint_path), 'a') as _zf:
+                _zf.writestr('version', '3')
+    except (zipfile.BadZipFile, OSError):
+        pass  # not a ZIP — let torch.load handle it
+
+    try:
+        state_dict = torch.load(str(checkpoint_path), map_location="cpu", weights_only=False)
+    except TypeError:
+        # weights_only kwarg not available in older torch builds
+        state_dict = torch.load(str(checkpoint_path), map_location="cpu")
     runner.load_state_dict(state_dict["training_module"])
     runner.to("cuda:0")
     runner.eval()
