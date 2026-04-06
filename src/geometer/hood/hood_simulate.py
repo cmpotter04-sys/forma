@@ -373,7 +373,9 @@ def _run_contourcraft_inference(
         sample = move2device(sample, _device)
 
         with torch.no_grad():
-            trajectories_dict = runner.valid_rollout(sample, n_steps=n_steps, bare=True)
+            trajectories_dict = runner.valid_rollout(
+                sample, n_steps=n_steps, bare=True, safecheck=False
+            )
 
         # trajectories_dict['pred'] has shape (n_steps, V, 3)
         # Take the final frame. valid_rollout may return a torch tensor (CUDA)
