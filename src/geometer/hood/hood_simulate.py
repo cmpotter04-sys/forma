@@ -146,20 +146,42 @@ def _build_contourcraft_runner(contourcraft_root: str | Path, checkpoint_path: s
 
     runner_module, runner, _aux = create_runner(modules, config, create_aux_modules=False)
 
-    # PyTorch 2.6+ requires a '{archive}/version' record in the checkpoint ZIP.
-    # Older ContourCraft checkpoints are missing it. Detect the archive prefix
-    # from existing entries (e.g. "archive") and write the missing record.
+    # PyTorch 2.x requires two records in the checkpoint ZIP:
+    #   {prefix}/version  — protocol version (e.g. '3')
+    #   {prefix}/data.pkl — pickled state dict
+    # Old ContourCraft checkpoints (ccraft_data prefix) are missing both:
+    # they have 'version' absent and name the pickle '{prefix}/{prefix}.pkl'
+    # (e.g. 'ccraft_data/ccraft_data.pkl') rather than '{prefix}/data.pkl'.
+    # We detect and patch both in a single ZIP append pass.
     import zipfile
     try:
         with zipfile.ZipFile(str(checkpoint_path), 'r') as _zf:
             _names = _zf.namelist()
-        # Detect archive prefix: the common leading directory of all entries
         _prefixes = set(_n.split('/')[0] for _n in _names if '/' in _n)
         _prefix = next(iter(_prefixes)) if len(_prefixes) == 1 else 'archive'
+
+        _to_add: list[tuple[str, bytes | str]] = []
+
         _version_key = f'{_prefix}/version'
         if _version_key not in _names:
+            _to_add.append((_version_key, '3'))
+
+        _data_pkl_key = f'{_prefix}/data.pkl'
+        if _data_pkl_key not in _names:
+            # Find the actual pickle: old format names it '{prefix}/{prefix}.pkl'
+            _pkl_candidates = [
+                n for n in _names
+                if n.endswith('.pkl') and n.startswith(_prefix + '/')
+            ]
+            if _pkl_candidates:
+                with zipfile.ZipFile(str(checkpoint_path), 'r') as _zf:
+                    _pkl_bytes = _zf.read(_pkl_candidates[0])
+                _to_add.append((_data_pkl_key, _pkl_bytes))
+
+        if _to_add:
             with zipfile.ZipFile(str(checkpoint_path), 'a') as _zf:
-                _zf.writestr(_version_key, '3')
+                for _key, _content in _to_add:
+                    _zf.writestr(_key, _content)
     except (zipfile.BadZipFile, OSError):
         pass  # not a ZIP — let torch.load handle it
 
@@ -331,8 +353,13 @@ def _run_contourcraft_inference(
             trajectories_dict = runner.valid_rollout(sample, n_steps=n_steps, bare=True)
 
         # trajectories_dict['pred'] has shape (n_steps, V, 3)
-        # Take the final frame for the draped garment positions
-        final_positions = trajectories_dict["pred"][-1].astype(np.float64)
+        # Take the final frame. valid_rollout may return a torch tensor (CUDA)
+        # or a numpy array depending on the ContourCraft version — handle both.
+        _pred_frame = trajectories_dict["pred"][-1]
+        if hasattr(_pred_frame, "detach"):
+            final_positions = _pred_frame.detach().cpu().numpy().astype(np.float64)
+        else:
+            final_positions = np.asarray(_pred_frame, dtype=np.float64)
 
     finally:
         DEFAULTS.data_root = original_data_root
@@ -423,21 +450,30 @@ def run_simulation_hood(
             "then set CONTOURCRAFT_ROOT=<path>"
         )
 
-    # Resolve checkpoint path
-    # Kaggle: set CONTOURCRAFT_CHECKPOINT=/kaggle/working/ContourCraft/trained_models/contourcraft.pth
+    # Resolve checkpoint path.
+    # The Google Drive ID '1NfxAeaC2va8TWMjiO_gbAcVPnZ8BYFPD' downloads the full
+    # ccraft_data.zip bundle. The actual model is inside at:
+    #   ccraft_data/trained_models/contourcraft.pth
+    # On Kaggle: set CONTOURCRAFT_CHECKPOINT to that inner path after extraction.
     if checkpoint_path is None:
         env_ckpt = os.environ.get("CONTOURCRAFT_CHECKPOINT")
         if env_ckpt:
             checkpoint_path = Path(env_ckpt)
         else:
-            checkpoint_path = contourcraft_root / "trained_models" / "contourcraft.pth"
+            # Prefer the extracted ccraft_data bundle path over CC code dir
+            ccraft_data_root = Path(os.environ.get(
+                "CCRAFT_DATA_ROOT", "/kaggle/working/ccraft_data"
+            ))
+            checkpoint_path = ccraft_data_root / "trained_models" / "contourcraft.pth"
 
     checkpoint_path = Path(checkpoint_path)
     if not checkpoint_path.exists():
         raise RuntimeError(
             f"ContourCraft checkpoint not found: {checkpoint_path}.\n"
-            "Download contourcraft.pth (gdown 1NfxAeaC2va8TWMjiO_gbAcVPnZ8BYFPD) "
-            "and place it at the path above, or set CONTOURCRAFT_CHECKPOINT=<path>."
+            "Download the ccraft_data bundle: gdown 1NfxAeaC2va8TWMjiO_gbAcVPnZ8BYFPD -O ccraft_data.zip\n"
+            "Extract: unzip ccraft_data.zip\n"
+            "The checkpoint will be at: ccraft_data/trained_models/contourcraft.pth\n"
+            "Or set CONTOURCRAFT_CHECKPOINT=<path> to point directly to the .pth file."
         )
 
     # Ensure ContourCraft can be imported (checks CUDA)
