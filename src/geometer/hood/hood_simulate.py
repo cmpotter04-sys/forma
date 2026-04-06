@@ -146,15 +146,20 @@ def _build_contourcraft_runner(contourcraft_root: str | Path, checkpoint_path: s
 
     runner_module, runner, _aux = create_runner(modules, config, create_aux_modules=False)
 
-    # PyTorch 2.6+ requires a 'version' record in the checkpoint ZIP.
-    # Some older checkpoints are missing it. Add it in-place if needed.
+    # PyTorch 2.6+ requires a '{archive}/version' record in the checkpoint ZIP.
+    # Older ContourCraft checkpoints are missing it. Detect the archive prefix
+    # from existing entries (e.g. "archive") and write the missing record.
     import zipfile
     try:
         with zipfile.ZipFile(str(checkpoint_path), 'r') as _zf:
-            _missing_version = not any('version' in _n for _n in _zf.namelist())
-        if _missing_version:
+            _names = _zf.namelist()
+        # Detect archive prefix: the common leading directory of all entries
+        _prefixes = set(_n.split('/')[0] for _n in _names if '/' in _n)
+        _prefix = next(iter(_prefixes)) if len(_prefixes) == 1 else 'archive'
+        _version_key = f'{_prefix}/version'
+        if _version_key not in _names:
             with zipfile.ZipFile(str(checkpoint_path), 'a') as _zf:
-                _zf.writestr('version', '3')
+                _zf.writestr(_version_key, '3')
     except (zipfile.BadZipFile, OSError):
         pass  # not a ZIP — let torch.load handle it
 
