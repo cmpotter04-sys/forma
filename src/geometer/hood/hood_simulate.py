@@ -384,6 +384,37 @@ def _run_contourcraft_inference(
         # defaults to its initialized CUDA context (cuda:0) while cloth_pos is
         # still a CPU tensor (move2device() misses lazily-constructed fields).
         _patched_modules: list[tuple] = []
+
+        # ---- Patch wp.from_torch to fix silent CPU fallback ----
+        # Root cause: wp.from_torch(cuda_tensor, dtype=wp.vec3) internally calls
+        # t.cpu().numpy() when the requested dtype != the inferred float32 dtype.
+        # This silently creates a CPU Warp array even though the input was on CUDA.
+        # wp.launch then defaults to cuda:0 but gets CPU arrays → RuntimeError.
+        #
+        # Fix: wrap wp.from_torch to detect CPU-from-CUDA and copy to GPU via wp.copy().
+        # Patching the module object affects ALL `import warp as wp` references
+        # (all point to the same sys.modules['warp'] object).
+        try:
+            import warp as _wp_ft
+            _orig_wp_from_torch = _wp_ft.from_torch
+
+            def _cuda_safe_wp_from_torch(tensor, dtype=None, requires_grad=False, **kw):
+                arr = _orig_wp_from_torch(tensor, dtype=dtype,
+                                          requires_grad=requires_grad, **kw)
+                if (hasattr(tensor, 'is_cuda') and tensor.is_cuda
+                        and hasattr(arr, 'device')
+                        and 'cpu' in str(arr.device).lower()):
+                    cuda_dev = f'cuda:{tensor.get_device()}'
+                    arr_gpu = _wp_ft.empty(arr.shape, dtype=arr.dtype, device=cuda_dev)
+                    _wp_ft.copy(arr_gpu, arr)
+                    return arr_gpu
+                return arr
+
+            _wp_ft.from_torch = _cuda_safe_wp_from_torch
+            _patched_modules.append((_wp_ft, 'from_torch', _orig_wp_from_torch))
+        except (ImportError, AttributeError):
+            pass
+
         try:
             import utils.warp_u.proximity as _prox_mod  # ContourCraft
             _orig_gps = _prox_mod.get_proximity_self_pt_dummmy
