@@ -669,6 +669,12 @@ def run_simulation_hood(
         # Load runner and run inference
         _, runner = _build_contourcraft_runner(contourcraft_root, checkpoint_path)
 
+        # Diagnostic: confirm input scales before simulation
+        _gv = garment["vertices"]
+        _bv = body_vertices
+        print(f"[HOOD_DIAG] body: n={len(_bv)}, Y=[{_bv[:,1].min():.3f},{_bv[:,1].max():.3f}]m, max_abs={np.abs(_bv).max():.3f}m")
+        print(f"[HOOD_DIAG] garment: n={len(_gv)}, Y=[{_gv[:,1].min():.3f},{_gv[:,1].max():.3f}]m, max_abs={np.abs(_gv).max():.3f}m")
+
         draped_positions = _run_contourcraft_inference(
             runner,
             body_seq_pkl,
@@ -680,9 +686,20 @@ def run_simulation_hood(
     simulation_ms = int((time.perf_counter() - t_start) * 1000)
 
     # ---- 5b. Sanity check — explosion detection -----------------------------
-    if np.any(np.isnan(draped_positions)) or np.any(np.abs(draped_positions) > 10.0):
+    _has_nan = bool(np.any(np.isnan(draped_positions)))
+    _max_abs = float(np.nanmax(np.abs(draped_positions))) if not _has_nan else float('nan')
+    _n_verts = len(draped_positions)
+    print(f"[HOOD_DIAG] draped_positions: n={_n_verts}, max_abs={_max_abs:.4f}m, "
+          f"has_nan={_has_nan}, dtype={draped_positions.dtype}")
+    if not _has_nan:
+        print(f"[HOOD_DIAG] Y range: {draped_positions[:,1].min():.3f} to {draped_positions[:,1].max():.3f} m")
+        print(f"[HOOD_DIAG] X range: {draped_positions[:,0].min():.3f} to {draped_positions[:,0].max():.3f} m")
+        print(f"[HOOD_DIAG] Z range: {draped_positions[:,2].min():.3f} to {draped_positions[:,2].max():.3f} m")
+        _n_extreme = int(np.sum(np.abs(draped_positions) > 10.0))
+        print(f"[HOOD_DIAG] vertices with |coord|>10m: {_n_extreme}/{_n_verts}")
+    if _has_nan or _max_abs > 10.0:
         raise SimulationExplosionError(
-            "ContourCraft solver produced NaN or extreme positions. "
+            f"ContourCraft solver produced {'NaN' if _has_nan else f'extreme positions (max={_max_abs:.2f}m)'}. "
             "Check checkpoint compatibility and input mesh scale (must be metres)."
         )
 
