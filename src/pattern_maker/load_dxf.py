@@ -5,10 +5,13 @@ Deterministic DXF panel ingestion for Forma.
 
 Current scope:
   - extracts closed panel outlines from DXF modelspace
-  - supports lightweight DXF panel entities (LWPOLYLINE / POLYLINE)
+  - supports LWPOLYLINE, POLYLINE (straight-segment polylines) and SPLINE
+    (closed B-spline curves, common in CLO3D / Optitex / Lectra DXFs for
+    curved armholes, necklines, and sleeve caps). SPLINE entities are
+    discretised to ≤0.5 mm deviation using ezdxf's flattening() method.
   - converts outlines into the same canonical pattern dict shape returned by
-    load_patterns.load_pattern(), so Tailor and Geometer can eventually share
-    the same downstream contract
+    load_patterns.load_pattern(), so Tailor and Geometer can share the same
+    downstream contract
 
 This is the first step for brand DXF ingestion; seam inference is intentionally
 out of scope for this module.
@@ -39,12 +42,21 @@ def _as_closed_vertices_mm(entity) -> list[list[float]]:
         if not entity.is_closed:
             raise DXFLoadError("Encountered open POLYLINE; panel outlines must be closed")
         points = [[float(v.dxf.location.x), float(v.dxf.location.y)] for v in entity.vertices]
+    elif entity.dxftype() == "SPLINE":
+        # Closed B-spline: discretise to ≤0.5 mm deviation.
+        # Used by CLO3D, Optitex, and Lectra for curved panel outlines
+        # (armholes, necklines, sleeve caps).
+        if not entity.closed:
+            raise DXFLoadError("Encountered open SPLINE; panel outlines must be closed")
+        flat_pts = list(entity.flattening(0.5))   # ezdxf returns Vec3 / (x,y,z)
+        points = [[float(pt[0]), float(pt[1])] for pt in flat_pts]
     else:
         raise DXFLoadError(f"Unsupported DXF panel entity: {entity.dxftype()}")
 
     if len(points) < 3:
         raise DXFLoadError("Panel outline must contain at least 3 points")
 
+    # Remove duplicate closing vertex if present (flattening() may include it)
     if np.allclose(points[0], points[-1]):
         points = points[:-1]
 
@@ -122,20 +134,25 @@ def load_dxf(
 
     entities = []
     for entity in msp:
-        if entity.dxftype() not in {"LWPOLYLINE", "POLYLINE"}:
+        if entity.dxftype() not in {"LWPOLYLINE", "POLYLINE", "SPLINE"}:
             continue
         if entity.dxftype() == "LWPOLYLINE" and not entity.closed:
             continue
         if entity.dxftype() == "POLYLINE" and not entity.is_closed:
             continue
-        vertices_mm = _as_closed_vertices_mm(entity)
+        if entity.dxftype() == "SPLINE" and not entity.closed:
+            continue
+        try:
+            vertices_mm = _as_closed_vertices_mm(entity)
+        except DXFLoadError:
+            continue  # skip malformed entities without aborting the whole file
         area_mm2 = _polygon_area(vertices_mm)
         if area_mm2 <= 0.0:
             continue
         entities.append((entity, vertices_mm, area_mm2))
 
     if not entities:
-        raise DXFLoadError(f"No closed DXF polylines found in modelspace: {path}")
+        raise DXFLoadError(f"No closed DXF panel outlines found in modelspace: {path}")
 
     # Deterministic order: larger panels first, then layer name.
     entities.sort(

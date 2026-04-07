@@ -113,7 +113,7 @@ class TestLoadDxfPattern:
         msp.add_line((0, 0), (10, 0))
         doc.saveas(path)
 
-        with pytest.raises(DxfLoadError, match="No closed DXF polylines"):
+        with pytest.raises(DxfLoadError, match="No closed DXF panel outlines"):
             load_dxf_pattern(path)
 
     def test_ignores_open_helper_polylines_when_closed_panels_exist(self, tmp_path: Path):
@@ -173,3 +173,65 @@ class TestMessyDxfFixture:
         panel_ids = {p["panel_id"] for p in manifest["panels"]}
         assert "front_ftorso" in panel_ids
         assert "back_btorso" in panel_ids
+
+
+class TestSplineDxfIngestion:
+    """SPLINE entity support (CLO3D / Optitex / Lectra DXFs with curved outlines)."""
+
+    @staticmethod
+    def _write_spline_tshirt_dxf(path: Path) -> Path:
+        """Write a DXF with 4 closed SPLINE panel outlines (simple rectangles as B-splines)."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        panels = {
+            "front_body":   [(0, 0), (180, 0), (180, 200), (90, 230), (0, 200)],
+            "back_body":    [(220, 0), (400, 0), (400, 200), (310, 230), (220, 200)],
+            "left_sleeve":  [(-120, 100), (-40, 100), (-20, 150), (-80, 210), (-120, 150)],
+            "right_sleeve": [(440, 100), (520, 100), (540, 150), (480, 210), (440, 150)],
+        }
+        for layer, pts in panels.items():
+            spline = msp.add_spline(fit_points=pts, degree=3, dxfattribs={"layer": layer})
+            spline.closed = True
+        doc.saveas(path)
+        return path
+
+    def test_spline_panels_loaded_as_canonical_pattern(self, tmp_path: Path):
+        dxf_path = self._write_spline_tshirt_dxf(tmp_path / "spline_shirt.dxf")
+        pattern = load_dxf_pattern(dxf_path)
+
+        assert set(pattern["panels"]) == {
+            "front_body", "back_body", "left_sleeve", "right_sleeve",
+        }
+        # Each panel should have more vertices than the 5 fit points (SPLINE flattened)
+        for panel_id, panel in pattern["panels"].items():
+            assert len(panel["vertices"]) >= 5, (
+                f"{panel_id}: expected ≥5 vertices from SPLINE flattening, "
+                f"got {len(panel['vertices'])}"
+            )
+
+    def test_open_spline_is_ignored(self, tmp_path: Path):
+        """An open SPLINE (not a closed panel boundary) should not be ingested."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+        # Four valid closed LWPOLYLINE panels
+        for layer, pts in [
+            ("front_body",   [(0, 0), (180, 0), (180, 200), (0, 200)]),
+            ("back_body",    [(220, 0), (400, 0), (400, 200), (220, 200)]),
+            ("left_sleeve",  [(-120, 100), (-40, 100), (-40, 200), (-120, 200)]),
+            ("right_sleeve", [(440, 100), (520, 100), (520, 200), (440, 200)]),
+        ]:
+            msp.add_lwpolyline(pts, format="xy", close=True, dxfattribs={"layer": layer})
+        # Open SPLINE annotation (grainline arrow, etc.) — should be silently skipped
+        msp.add_spline(
+            fit_points=[(10, 10), (20, 30), (30, 10)],
+            degree=3,
+            dxfattribs={"layer": "grainline"},
+        )
+        dxf_path = tmp_path / "mixed.dxf"
+        doc.saveas(dxf_path)
+
+        pattern = load_dxf_pattern(dxf_path)
+        assert set(pattern["panels"]) == {
+            "front_body", "back_body", "left_sleeve", "right_sleeve",
+        }
