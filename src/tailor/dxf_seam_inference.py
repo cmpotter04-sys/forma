@@ -253,6 +253,14 @@ def build_tshirt_dxf_seam_manifest(pattern: dict) -> dict:
             }
         )
 
+    if not seam_pairs:
+        raise DXFSeamInferenceError(
+            "No valid seam pairs could be inferred — all candidates exceeded the "
+            f"{2.0} mm arc-length tolerance or had unresolved edge roles. "
+            "Check that the DXF panels are correctly labelled and that corresponding "
+            "edges have matching lengths."
+        )
+
     used_edges = {sp["edge_a"] for sp in seam_pairs} | {sp["edge_b"] for sp in seam_pairs}
     unmatched = sorted(all_edge_ids - used_edges)
     max_diff = max((sp["arc_length_diff_mm"] for sp in seam_pairs), default=0.0)

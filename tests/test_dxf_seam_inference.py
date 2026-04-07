@@ -10,8 +10,11 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
+import pytest
+
 from pattern_maker.load_dxf import load_dxf_pattern
 from tailor.dxf_seam_inference import (
+    DXFSeamInferenceError,
     build_tshirt_dxf_seam_manifest,
     infer_tshirt_edge_roles,
 )
@@ -119,3 +122,29 @@ def test_build_tshirt_dxf_seam_manifest_can_emit_shoulder_seams(tmp_path: Path):
         "front_body" in a and "back_body" in b
         for a, b in seam_edges
     )
+
+
+def test_build_tshirt_dxf_seam_manifest_raises_when_all_seams_dropped(tmp_path: Path):
+    # Build a DXF where front and back side edges have wildly mismatched lengths
+    # (> 2mm tolerance) so all seam candidates get dropped.
+    doc = ezdxf.new("R2010")
+    msp = doc.modelspace()
+
+    # Both panels are simple rectangles (no shoulder geometry → no shoulder
+    # role assignments). The only seam candidates are left/right side seams.
+    # front is 60mm tall, back is 200mm tall → side-edge diff = 140mm >> 2mm,
+    # so all candidates get dropped.
+    _add_panel(msp, "front_body", [(0, 0), (180, 0), (180, 60), (0, 60)])
+    _add_panel(msp, "back_body",  [(220, 0), (400, 0), (400, 200), (220, 200)])
+    _add_panel(msp, "left_sleeve", [
+        (-120, 120), (-40, 120), (-20, 160), (-40, 210), (-120, 210),
+    ])
+    _add_panel(msp, "right_sleeve", [
+        (750, 120), (830, 120), (850, 160), (830, 210), (750, 210),
+    ])
+    dxf_path = tmp_path / "mismatched.dxf"
+    doc.saveas(dxf_path)
+
+    pattern = load_dxf_pattern(dxf_path)
+    with pytest.raises(DXFSeamInferenceError, match="No valid seam pairs"):
+        build_tshirt_dxf_seam_manifest(pattern)
