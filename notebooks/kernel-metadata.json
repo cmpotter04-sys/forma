@@ -8,7 +8,7 @@
   "enable_gpu": true,
   "enable_tpu": false,
   "enable_internet": true,
-  "dataset_sources": [],
+  "dataset_sources": ["calvinpotter/pytorch3d-t4-whl"],
   "competition_sources": [],
   "kernel_sources": []
 }
