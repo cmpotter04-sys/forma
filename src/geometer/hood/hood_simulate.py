@@ -520,7 +520,7 @@ def run_simulation_hood(
     seam_manifest_path: str | Path,
     fabric_params: dict,
     dt: float = 0.001,
-    max_steps: int = 200,
+    max_steps: int = 300,
     subdivide_target: int = 0,
     contourcraft_root: str | Path | None = None,
     checkpoint_path: str | Path | None = None,
@@ -679,7 +679,7 @@ def run_simulation_hood(
         garment_template_pkl = _build_garment_template_pkl(
             garment["vertices"],
             garment["faces"],
-            pinned_top_fraction=0.15,  # top 15% by Y — increased from 8% to reduce explosion
+            pinned_top_fraction=0.08,  # top 8% by Y (original value; 15% was workaround before use_safecheck fix)
             tmp_dir=tmp_dir,
             contourcraft_root=contourcraft_root,
         )
