@@ -201,6 +201,7 @@ def _build_contourcraft_runner(contourcraft_root: str | Path, checkpoint_path: s
     _device = os.environ.get("HOOD_DEVICE", "cuda:0")
     runner.to(_device)
     runner.mcfg.device = _device  # patch config so rollout uses correct device
+    runner.mcfg.use_safecheck = True  # enable impulse limiting in _rollout (safecheck= param is a dead codepath)
     runner.eval()
 
     return runner_module, runner
@@ -299,7 +300,7 @@ def _build_garment_template_pkl(
     }
 
     # Build coarse (long-range) graph edges — required by ContourCraft GNN
-    garment_dict = add_coarse_edges(garment_dict, n_coarse_levels=5, approximate_center=True)
+    garment_dict = add_coarse_edges(garment_dict, n_coarse_levels=4, approximate_center=True)
 
     # Fix: ensure all coarse edge arrays are 2D (E, 2).
     # make_coarse_edges() returns np.array(G.edges) which is 1D shape (0,) when
