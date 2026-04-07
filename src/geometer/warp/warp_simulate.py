@@ -152,6 +152,25 @@ def _build_warp_model(
     y_threshold = float(np.percentile(y_coords, 92))
     collar_mask = y_coords >= y_threshold
 
+    # ---- Snap seam vertex pairs to their midpoints ----
+    # Warp's add_spring(control=0.0) uses the distance at finalize-time as
+    # the spring rest length. Seam constraints should have rest_length = 0
+    # (panels must pull together, not maintain their initial separation).
+    # project_garment_onto_body places seam pairs close together (~1-5mm)
+    # but not exactly at zero distance. Snapping to the midpoint before
+    # adding particles ensures Warp computes rest_length = 0 for all seams.
+    positions = positions.copy()  # don't mutate the garment dict
+    for seam_arr_i, seam_arr_j in [
+        (garment["seam_i"], garment["seam_j"]),
+        (garment.get("sleeve_seam_i", np.array([], dtype=np.int32)),
+         garment.get("sleeve_seam_j", np.array([], dtype=np.int32))),
+    ]:
+        for k in range(len(seam_arr_i)):
+            vi, vj = int(seam_arr_i[k]), int(seam_arr_j[k])
+            midpoint = (positions[vi] + positions[vj]) * 0.5
+            positions[vi] = midpoint
+            positions[vj] = midpoint
+
     # ---- Add garment particles ----
     for i in range(N):
         m = 0.0 if collar_mask[i] else float(masses[i])
@@ -458,6 +477,21 @@ def run_simulation_warp(
     # ---- 4b. Project garment onto body surface (pre-sim placement) ----------
     garment = project_garment_onto_body(garment, body_vertices, body_normals)
 
+    # ---- 4b-post. Recompute stretch_rest from post-projection positions ------
+    # assemble_garment() computes stretch_rest from 3D-wrapped pre-projection
+    # positions. After project_garment_onto_body(), vertex positions change by
+    # ~1-5mm (collision resolution). Warp's add_spring(control=0.0) uses
+    # finalize-time positions as rest lengths, so Warp enforces post-projection
+    # rest lengths. Recomputing here ensures compute_strain_ratios uses the
+    # same reference lengths as the springs, preventing systematic ~1-5mm error.
+    _pp = garment["vertices"]
+    _si = garment["stretch_i"]
+    _sj = garment["stretch_j"]
+    garment = dict(garment)
+    garment["stretch_rest"] = np.linalg.norm(
+        _pp[_si] - _pp[_sj], axis=1
+    ).astype(np.float64)
+
     # ---- 4c. Optional subdivision ------------------------------------------
     if subdivide_target > 0:
         from geometer.subdivide import subdivide_garment
@@ -509,6 +543,13 @@ def run_simulation_warp(
     )
 
     # ---- 7. Compute clearance per region ------------------------------------
+    # Pass bend_offset_m=0.0 to compute_region_clearance: the position-level
+    # offset (applied above at step 5b) already accounts for bending stiffness.
+    # Passing bend_offset_m again would double-apply it in the circumference
+    # formula (clearance.py:102), causing systematic overcorrection for non-
+    # cotton fabrics. Since real dihedral bending constraints are now active
+    # (add_edge in _build_warp_model), the post-hoc offset is near-zero for
+    # cotton anyway; for other fabrics it is applied once via position shift.
     clearance_map: dict[str, float] = {}
     for region in REQUIRED_REGIONS:
         delta_mm = compute_region_clearance(
@@ -519,7 +560,7 @@ def run_simulation_warp(
             body_regions[region],
             garment_scale=garment.get("garment_scale"),
             body_map=garment.get("body_map"),
-            bend_offset_m=bend_offset_m,
+            bend_offset_m=0.0,
         )
         clearance_map[region] = round(delta_mm, 3)
 
