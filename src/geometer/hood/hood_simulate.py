@@ -299,7 +299,7 @@ def _build_garment_template_pkl(
     }
 
     # Build coarse (long-range) graph edges — required by ContourCraft GNN
-    garment_dict = add_coarse_edges(garment_dict, n_coarse_levels=4, approximate_center=True)
+    garment_dict = add_coarse_edges(garment_dict, n_coarse_levels=5, approximate_center=True)
 
     # Fix: ensure all coarse edge arrays are 2D (E, 2).
     # make_coarse_edges() returns np.array(G.edges) which is 1D shape (0,) when
@@ -661,7 +661,7 @@ def run_simulation_hood(
         garment_template_pkl = _build_garment_template_pkl(
             garment["vertices"],
             garment["faces"],
-            pinned_top_fraction=0.08,  # top 8% by Y — matches CPU/Warp backends
+            pinned_top_fraction=0.15,  # top 15% by Y — increased from 8% to reduce explosion
             tmp_dir=tmp_dir,
             contourcraft_root=contourcraft_root,
         )
