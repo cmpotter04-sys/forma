@@ -299,20 +299,37 @@ def _build_garment_template_pkl(
         "node_type": node_type,
     }
 
-    # Build coarse (long-range) graph edges — required by ContourCraft GNN
-    garment_dict = add_coarse_edges(garment_dict, n_coarse_levels=4, approximate_center=True)
+    # Build coarse (long-range) graph edges — required by ContourCraft GNN.
+    #
+    # ContourCraft's add_coarse_edges calls np.concatenate on lists that may contain
+    # 1D empty arrays (shape (0,)) mixed with 2D arrays (shape (E, 2)) when the mesh
+    # has too few vertices at a coarse level (common for small subdivided meshes).
+    # We temporarily patch np.concatenate to normalize empty 1D arrays to (0, 2)
+    # so the internal concat never sees a shape mismatch.
+    _orig_np_concat = np.concatenate
 
-    # Fix: ensure all coarse edge arrays are 2D (E, 2).
-    # make_coarse_edges() returns np.array(G.edges) which is 1D shape (0,) when
-    # a coarse-level graph has zero edges (common for small meshes at high coarse
-    # levels). ContourCraft's from_any_pose.py:220 does edges[:, [1, 0]] which
-    # crashes on 1D arrays with "IndexError: too many indices".
+    def _safe_np_concat(seq, axis=0, **kwargs):
+        normalized = []
+        for arr in seq:
+            arr = np.asarray(arr)
+            if arr.ndim == 1 and arr.size == 0:
+                arr = arr.reshape(0, 2)
+            normalized.append(arr)
+        return _orig_np_concat(normalized, axis=axis, **kwargs)
+
+    np.concatenate = _safe_np_concat
+    try:
+        garment_dict = add_coarse_edges(garment_dict, n_coarse_levels=4, approximate_center=True)
+    finally:
+        np.concatenate = _orig_np_concat
+
+    # Second pass: ensure all stored coarse edge arrays are 2D (E, 2).
+    # from_any_pose.py line ~220 does edges[:, [1, 0]] which crashes on 1D arrays.
     if "coarse_edges" in garment_dict:
         for center_key, level_dict in garment_dict["coarse_edges"].items():
             for level_key, edges_arr in level_dict.items():
                 edges_arr = np.asarray(edges_arr)
                 if edges_arr.ndim == 1:
-                    # Empty edge list — reshape to (0, 2)
                     level_dict[level_key] = edges_arr.reshape(0, 2)
 
     out_path = tmp_dir / "garment_template.pkl"
