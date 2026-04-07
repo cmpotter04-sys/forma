@@ -372,10 +372,50 @@ def _run_contourcraft_inference(
         _device = os.environ.get("HOOD_DEVICE", "cuda:0")
         sample = move2device(sample, _device)
 
-        with torch.no_grad():
-            trajectories_dict = runner.valid_rollout(
-                sample, n_steps=n_steps, bare=True, safecheck=False
-            )
+        # Patch get_proximity_self_pt_dummmy to pin all tensor args to _device.
+        #
+        # Root cause: wp.launch() in ContourCraft's proximity.py has no explicit
+        # device= argument, so Warp defaults to its initialised device (cuda:0).
+        # But move2device() does not reach every nested tensor that ContourCraft
+        # constructs lazily inside add_world_edges (e.g. rest_pos fields that
+        # originate as numpy arrays in the pkl dataloader and are converted to
+        # CPU tensors on first use). The mismatch produces:
+        #   RuntimeError: trying to launch on device='cuda:0', but input array
+        #   for argument 'query_points' is on device=cpu.
+        # Moving all tensor arguments to _device at the boundary is the safest
+        # fix without touching ContourCraft source.
+        try:
+            import utils.warp_u.proximity as _prox_mod  # ContourCraft
+            _orig_gps = _prox_mod.get_proximity_self_pt_dummmy
+
+            def _gps_device_safe(
+                query_points, mesh_verts, mesh_faces, max_distance,
+                pairs_pre_point=32, query_ids=None,
+            ):
+                query_points = query_points.to(_device)
+                mesh_verts   = mesh_verts.to(_device)
+                mesh_faces   = mesh_faces.to(_device)
+                if query_ids is not None:
+                    query_ids = query_ids.to(_device)
+                return _orig_gps(
+                    query_points, mesh_verts, mesh_faces,
+                    max_distance, pairs_pre_point, query_ids,
+                )
+
+            _prox_mod.get_proximity_self_pt_dummmy = _gps_device_safe
+            _patched_prox = True
+        except (ImportError, AttributeError):
+            _patched_prox = False
+
+        try:
+            with torch.no_grad():
+                trajectories_dict = runner.valid_rollout(
+                    sample, n_steps=n_steps, bare=True, safecheck=False
+                )
+        finally:
+            # Restore original so repeated calls (or other code) are not affected.
+            if _patched_prox:
+                _prox_mod.get_proximity_self_pt_dummmy = _orig_gps
 
         # trajectories_dict['pred'] has shape (n_steps, V, 3)
         # Take the final frame. valid_rollout may return a torch tensor (CUDA)
