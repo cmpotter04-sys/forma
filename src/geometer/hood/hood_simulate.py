@@ -254,6 +254,7 @@ def _build_garment_template_pkl(
     pinned_top_fraction: float,
     tmp_dir: Path,
     contourcraft_root: str | Path,
+    panel_vertex_ranges: dict | None = None,
 ) -> Path:
     """
     Serialise the assembled garment mesh into a ContourCraft garment template
@@ -265,9 +266,12 @@ def _build_garment_template_pkl(
         node_type : (N, 1) int64   — 0 = regular, 3 = pinned (HANDLE)
         coarse_edges : dict        — long-range graph edges (built automatically)
 
-    We pin the collar (top `pinned_top_fraction` of vertices by Y) by setting
-    node_type = NodeType.HANDLE, matching the collar-pinning in the CPU / Warp
-    backends.
+    We pin:
+      1. Collar (top `pinned_top_fraction` of vertices by Y) — prevents
+         the whole garment from floating up.
+      2. Sleeve caps (top 20% of each sleeve panel by Y) — prevents the
+         right sleeve from drifting > 10cm from the body during ContourCraft
+         rollout, which would exclude it from region assignment.
 
     Parameters
     ----------
@@ -276,6 +280,8 @@ def _build_garment_template_pkl(
     pinned_top_fraction    : fraction of top vertices to pin (0.08 = top 8%)
     tmp_dir                : temporary directory for the .pkl file
     contourcraft_root      : path to ContourCraft repo (for imports)
+    panel_vertex_ranges    : dict mapping panel_name → (start_idx, end_idx)
+                             from assemble_garment(); used to pin sleeve caps
 
     Returns
     -------
@@ -292,6 +298,26 @@ def _build_garment_template_pkl(
     y_threshold = float(np.percentile(y_coords, (1.0 - pinned_top_fraction) * 100.0))
     collar_mask = y_coords >= y_threshold
     node_type[collar_mask] = NodeType.HANDLE
+
+    # Pin sleeve caps: top 20% of each sleeve panel by Y.
+    # ContourCraft's GNN has no seam constraints — sleeve panels can drift
+    # away from the body with a static obstacle (zero obstacle velocity).
+    # Pinning the cap anchors the sleeve at the armhole without constraining
+    # the body of the sleeve, matching real sewn-seam physics.
+    if panel_vertex_ranges:
+        for panel_name, (start_idx, end_idx) in panel_vertex_ranges.items():
+            if 'sleeve' not in panel_name.lower():
+                continue
+            if end_idx <= start_idx:
+                continue
+            sleeve_y = garment_vertices[start_idx:end_idx, 1]
+            cap_threshold = float(np.percentile(sleeve_y, 80.0))  # top 20%
+            for local_i, abs_i in enumerate(range(start_idx, end_idx)):
+                if sleeve_y[local_i] >= cap_threshold:
+                    node_type[abs_i] = NodeType.HANDLE
+        n_pinned = int((node_type == NodeType.HANDLE).sum())
+        print(f"[HOOD_DIAG] HANDLE nodes: {n_pinned}/{N} "
+              f"(collar + sleeve caps)")
 
     garment_dict = {
         "rest_pos": garment_vertices.astype(np.float32),
@@ -675,13 +701,14 @@ def run_simulation_hood(
             body_vertices, body_faces, n_frames=max_steps, tmp_dir=tmp_dir
         )
 
-        # Garment as ContourCraft template (with collar pinning + coarse edges)
+        # Garment as ContourCraft template (with collar + sleeve cap pinning + coarse edges)
         garment_template_pkl = _build_garment_template_pkl(
             garment["vertices"],
             garment["faces"],
             pinned_top_fraction=0.08,  # top 8% by Y (original value; 15% was workaround before use_safecheck fix)
             tmp_dir=tmp_dir,
             contourcraft_root=contourcraft_root,
+            panel_vertex_ranges=garment.get("panel_vertex_ranges"),
         )
 
         # Load runner and run inference
