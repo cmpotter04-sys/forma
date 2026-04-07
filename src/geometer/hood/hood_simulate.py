@@ -374,16 +374,16 @@ def _run_contourcraft_inference(
 
         # Patch get_proximity_self_pt_dummmy to pin all tensor args to _device.
         #
-        # Root cause: wp.launch() in ContourCraft's proximity.py has no explicit
-        # device= argument, so Warp defaults to its initialised device (cuda:0).
-        # But move2device() does not reach every nested tensor that ContourCraft
-        # constructs lazily inside add_world_edges (e.g. rest_pos fields that
-        # originate as numpy arrays in the pkl dataloader and are converted to
-        # CPU tensors on first use). The mismatch produces:
-        #   RuntimeError: trying to launch on device='cuda:0', but input array
-        #   for argument 'query_points' is on device=cpu.
-        # Moving all tensor arguments to _device at the boundary is the safest
-        # fix without touching ContourCraft source.
+        # Root cause: ccraft.py uses `from utils.warp_u.proximity import
+        # get_proximity_self_pt_dummmy` — a direct name binding in the ccraft
+        # module's globals. Patching the proximity *module* attribute has no
+        # effect on that already-bound name. We must patch the name directly in
+        # every module that imported it, specifically models.ccraft where it is
+        # called at add_world_edges:272 and add_icontour:119.
+        # wp.launch() inside the function has no explicit device= so Warp
+        # defaults to its initialized CUDA context (cuda:0) while cloth_pos is
+        # still a CPU tensor (move2device() misses lazily-constructed fields).
+        _patched_modules: list[tuple] = []
         try:
             import utils.warp_u.proximity as _prox_mod  # ContourCraft
             _orig_gps = _prox_mod.get_proximity_self_pt_dummmy
@@ -402,10 +402,39 @@ def _run_contourcraft_inference(
                     max_distance, pairs_pre_point, query_ids,
                 )
 
+            # Patch the proximity module itself
             _prox_mod.get_proximity_self_pt_dummmy = _gps_device_safe
-            _patched_prox = True
+            _patched_modules.append((_prox_mod, 'get_proximity_self_pt_dummmy', _orig_gps))
+
+            # Patch get_closest_nodes_and_faces_pt_dummmy — same pattern,
+            # also imported directly in ccraft.py and has wp.launch w/o device=
+            _orig_gcnaf = _prox_mod.get_closest_nodes_and_faces_pt_dummmy
+
+            def _gcnaf_device_safe(
+                query_points, mesh_verts, mesh_faces, max_distance,
+            ):
+                query_points = query_points.to(_device)
+                mesh_verts   = mesh_verts.to(_device)
+                mesh_faces   = mesh_faces.to(_device)
+                return _orig_gcnaf(query_points, mesh_verts, mesh_faces, max_distance)
+
+            _prox_mod.get_closest_nodes_and_faces_pt_dummmy = _gcnaf_device_safe
+            _patched_modules.append(
+                (_prox_mod, 'get_closest_nodes_and_faces_pt_dummmy', _orig_gcnaf)
+            )
+
+            # Patch both names as bound in models.ccraft (direct imports)
+            import models.ccraft as _ccraft_mod  # ContourCraft
+            for _fname, _safe_fn, _orig_fn in [
+                ('get_proximity_self_pt_dummmy',        _gps_device_safe,   _orig_gps),
+                ('get_closest_nodes_and_faces_pt_dummmy', _gcnaf_device_safe, _orig_gcnaf),
+            ]:
+                if hasattr(_ccraft_mod, _fname):
+                    _patched_modules.append((_ccraft_mod, _fname, getattr(_ccraft_mod, _fname)))
+                    setattr(_ccraft_mod, _fname, _safe_fn)
+
         except (ImportError, AttributeError):
-            _patched_prox = False
+            pass
 
         try:
             with torch.no_grad():
@@ -413,9 +442,9 @@ def _run_contourcraft_inference(
                     sample, n_steps=n_steps, bare=True, safecheck=False
                 )
         finally:
-            # Restore original so repeated calls (or other code) are not affected.
-            if _patched_prox:
-                _prox_mod.get_proximity_self_pt_dummmy = _orig_gps
+            # Restore all patched module attributes so repeated calls are clean.
+            for _mod, _attr, _original in _patched_modules:
+                setattr(_mod, _attr, _original)
 
         # trajectories_dict['pred'] has shape (n_steps, V, 3)
         # Take the final frame. valid_rollout may return a torch tensor (CUDA)
