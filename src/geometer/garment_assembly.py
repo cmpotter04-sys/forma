@@ -238,15 +238,23 @@ def place_sleeve_at_armhole(
     #
     # Use Gram-Schmidt to project world_up onto the plane perpendicular to arm_dir,
     # giving u_perp ≈ "world up" in the arm's cross-section.  For a horizontal arm
-    # ([±1,0,0]) this exactly reproduces u_perp = [0,1,0] (Y/up) and
-    # v_perp = [0,0,±1] (Z/forward), matching the original Phase-1 cylinder wrapping
-    # where sin(angle) drove the Y component and cos(angle) drove the Z component.
+    # ([±1,0,0]) this exactly reproduces u_perp = [0,1,0] (Y/up).
+    #
+    # v_perp MUST always point toward +Z (front of body) regardless of which arm.
+    # Without the correction below, right-arm sleeves (arm_dir = [-1,0,0]) produce
+    # v_perp = [0,0,-1] via cross([-1,0,0], [0,1,0]), wrapping the sleeve cap
+    # facing the back of the body instead of the front.  The CPU XPBD solver
+    # corrects this through seam constraints, but ContourCraft's GNN is sensitive
+    # to the rest-pose orientation and drifts +15mm when the cap faces backward.
     world_up = np.array([0.0, 1.0, 0.0])
     if abs(np.dot(arm_dir, world_up)) > 0.9:
         world_up = np.array([0.0, 0.0, 1.0])
     u_perp = world_up - np.dot(world_up, arm_dir) * arm_dir
     u_perp /= np.linalg.norm(u_perp) + 1e-10
     v_perp = np.cross(arm_dir, u_perp)
+    # Normalize v_perp to +Z: if arm_dir[0] < 0 the cross product flips v_perp to -Z.
+    if v_perp[2] < 0:
+        v_perp = -v_perp
     v_perp /= np.linalg.norm(v_perp) + 1e-10
 
     positions = np.empty((len(pts), 3), dtype=float)
