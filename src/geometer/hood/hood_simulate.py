@@ -474,7 +474,7 @@ def _run_contourcraft_inference(
         try:
             with torch.no_grad():
                 trajectories_dict = runner.valid_rollout(
-                    sample, n_steps=n_steps, bare=True, safecheck=False
+                    sample, n_steps=n_steps, bare=True, safecheck=True
                 )
         finally:
             # Restore all patched module attributes so repeated calls are clean.
