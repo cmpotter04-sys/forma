@@ -387,28 +387,32 @@ def _run_contourcraft_inference(
 
         # ---- Patch wp.from_torch to fix silent CPU fallback ----
         # Root cause: wp.from_torch(cuda_tensor, dtype=wp.vec3) internally calls
-        # t.cpu().numpy() when the requested dtype != the inferred float32 dtype.
-        # This silently creates a CPU Warp array even though the input was on CUDA.
-        # wp.launch then defaults to cuda:0 but gets CPU arrays → RuntimeError.
+        # t.cpu().numpy() when the requested struct dtype (vec3, vec2i, …) doesn't
+        # match the inferred scalar dtype. This silently creates a CPU Warp array.
+        # wp.launch then defaults to cuda:0 but receives CPU arrays → RuntimeError.
         #
-        # Fix: wrap wp.from_torch to detect CPU-from-CUDA and copy to GPU via wp.copy().
-        # Patching the module object affects ALL `import warp as wp` references
-        # (all point to the same sys.modules['warp'] object).
+        # Fix (v37): for CUDA tensors with an explicit dtype, bypass wp.from_torch
+        # entirely — do the CPU round-trip ourselves and recreate on CUDA via
+        # wp.array(numpy_data, dtype, device='cuda:N'). This avoids wp.empty and
+        # wp.copy which may not exist in older Warp versions on Kaggle.
+        #
+        # Patching the warp module object affects all `import warp as wp` references
+        # (every module shares the same sys.modules['warp'] object).
         try:
             import warp as _wp_ft
             _orig_wp_from_torch = _wp_ft.from_torch
 
             def _cuda_safe_wp_from_torch(tensor, dtype=None, requires_grad=False, **kw):
-                arr = _orig_wp_from_torch(tensor, dtype=dtype,
-                                          requires_grad=requires_grad, **kw)
-                if (hasattr(tensor, 'is_cuda') and tensor.is_cuda
-                        and hasattr(arr, 'device')
-                        and 'cpu' in str(arr.device).lower()):
+                # Only intercept: CUDA tensor + explicit dtype (struct or scalar).
+                # Without dtype, wp.from_torch does zero-copy on CUDA — leave it alone.
+                if dtype is not None and hasattr(tensor, 'is_cuda') and tensor.is_cuda:
                     cuda_dev = f'cuda:{tensor.get_device()}'
-                    arr_gpu = _wp_ft.empty(arr.shape, dtype=arr.dtype, device=cuda_dev)
-                    _wp_ft.copy(arr_gpu, arr)
-                    return arr_gpu
-                return arr
+                    # tensor → CPU numpy → wp.array on CUDA (works in all Warp versions)
+                    np_data = tensor.detach().cpu().contiguous().numpy()
+                    return _wp_ft.array(np_data, dtype=dtype, device=cuda_dev)
+                return _orig_wp_from_torch(
+                    tensor, dtype=dtype, requires_grad=requires_grad, **kw
+                )
 
             _wp_ft.from_torch = _cuda_safe_wp_from_torch
             _patched_modules.append((_wp_ft, 'from_torch', _orig_wp_from_torch))
