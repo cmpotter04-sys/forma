@@ -254,7 +254,6 @@ def _build_garment_template_pkl(
     pinned_top_fraction: float,
     tmp_dir: Path,
     contourcraft_root: str | Path,
-    panel_vertex_ranges: dict | None = None,
 ) -> Path:
     """
     Serialise the assembled garment mesh into a ContourCraft garment template
@@ -280,8 +279,6 @@ def _build_garment_template_pkl(
     pinned_top_fraction    : fraction of top vertices to pin (0.08 = top 8%)
     tmp_dir                : temporary directory for the .pkl file
     contourcraft_root      : path to ContourCraft repo (for imports)
-    panel_vertex_ranges    : dict mapping panel_name → (start_idx, end_idx)
-                             from assemble_garment(); used to pin sleeve caps
 
     Returns
     -------
@@ -299,25 +296,26 @@ def _build_garment_template_pkl(
     collar_mask = y_coords >= y_threshold
     node_type[collar_mask] = NodeType.HANDLE
 
-    # Pin sleeve caps: top 20% of each sleeve panel by Y.
-    # ContourCraft's GNN has no seam constraints — sleeve panels can drift
-    # away from the body with a static obstacle (zero obstacle velocity).
-    # Pinning the cap anchors the sleeve at the armhole without constraining
-    # the body of the sleeve, matching real sewn-seam physics.
-    if panel_vertex_ranges:
-        for panel_name, (start_idx, end_idx) in panel_vertex_ranges.items():
-            if 'sleeve' not in panel_name.lower():
-                continue
-            if end_idx <= start_idx:
-                continue
-            sleeve_y = garment_vertices[start_idx:end_idx, 1]
-            cap_threshold = float(np.percentile(sleeve_y, 80.0))  # top 20%
-            for local_i, abs_i in enumerate(range(start_idx, end_idx)):
-                if sleeve_y[local_i] >= cap_threshold:
-                    node_type[abs_i] = NodeType.HANDLE
-        n_pinned = int((node_type == NodeType.HANDLE).sum())
-        print(f"[HOOD_DIAG] HANDLE nodes: {n_pinned}/{N} "
-              f"(collar + sleeve caps)")
+    # Pin sleeve caps geometrically.
+    # panel_vertex_ranges is cleared by subdivide() so we cannot rely on it.
+    # Instead, identify sleeves as lateral appendages (|X| > torso half-width).
+    # The torso occupies roughly |X| < 0.20 m for a male-M body.
+    # For each lateral cluster, pin the top 20% by Y (the armhole cap).
+    # This anchors the sleeve at the armhole and prevents GNN drift caused by
+    # zero obstacle velocity in static-body inference.
+    TORSO_X_HALF = 0.20  # m
+    for sign in (+1.0, -1.0):
+        lateral_mask = (sign * garment_vertices[:, 0]) > TORSO_X_HALF
+        idxs = np.where(lateral_mask)[0]
+        if len(idxs) == 0:
+            continue
+        ys = garment_vertices[idxs, 1]
+        cap_threshold = float(np.percentile(ys, 80.0))
+        for i, abs_i in enumerate(idxs):
+            if ys[i] >= cap_threshold:
+                node_type[abs_i] = NodeType.HANDLE
+    n_pinned = int((node_type == NodeType.HANDLE).sum())
+    print(f"[HOOD_DIAG] HANDLE nodes: {n_pinned}/{N} (collar + sleeve caps)")
 
     garment_dict = {
         "rest_pos": garment_vertices.astype(np.float32),
@@ -708,7 +706,6 @@ def run_simulation_hood(
             pinned_top_fraction=0.08,  # top 8% by Y (original value; 15% was workaround before use_safecheck fix)
             tmp_dir=tmp_dir,
             contourcraft_root=contourcraft_root,
-            panel_vertex_ranges=garment.get("panel_vertex_ranges"),
         )
 
         # Load runner and run inference
