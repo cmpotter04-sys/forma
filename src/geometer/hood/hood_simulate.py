@@ -770,6 +770,9 @@ def run_simulation_hood(
     garment_regions = assign_garment_to_body_regions(
         draped_positions, body_vertices, body_regions
     )
+    # Diagnostic: log assignment counts per region
+    for rname, rvids in sorted(garment_regions.items()):
+        print(f"[HOOD_DIAG] region_assign {rname}: {len(rvids)} garment verts")
 
     # ---- 7. Compute clearance per region ------------------------------------
     clearance_map: dict[str, float] = {}
